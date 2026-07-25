@@ -53,6 +53,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"GsmApn", {PERSISTENT, STRING}},
     {"GsmMetered", {PERSISTENT, BOOL, "1"}},
     {"GsmRoaming", {PERSISTENT, BOOL}},
+    {"GreenLightAlert", {PERSISTENT, BOOL}},
     {"HardwareSerial", {PERSISTENT, STRING}},
     {"HasAcceptedTerms", {PERSISTENT, STRING, "0"}},
     {"InstallDate", {PERSISTENT, TIME}},
@@ -78,6 +79,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"LastUpdateTime", {PERSISTENT, TIME}},
     {"LastUpdateUptimeOnroad", {PERSISTENT, FLOAT, "0.0"}},
     // TODO: rename the Live* learner cache keys to match their Cereal services, with migration for persisted values.
+    {"LeadDepartAlert", {PERSISTENT, BOOL}},
     {"LiveDelay", {PERSISTENT, BYTES}},
     {"LiveParametersV2", {PERSISTENT, BYTES}},
     {"LivestreamEncoderBitrate", {CLEAR_ON_MANAGER_START | DONT_LOG, INT}},

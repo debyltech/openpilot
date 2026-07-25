@@ -30,6 +30,10 @@ class TogglesLayoutMici(NavScroller):
                                  description="Warn when you drift across a detected lane line.\n" +
                                              "Only above 31 mph (50 km/h), with no turn signal.")
     always_on_dm_toggle = BigParamControl("always-on driver monitor", "AlwaysOnDM", description="Monitor the driver even when openpilot is not engaged.")
+    green_light_toggle = BigParamControl("green light chime", "GreenLightAlert",
+                                         description="Chime when the light ahead turns green while you're stopped.")
+    lead_depart_toggle = BigParamControl("lead departure chime", "LeadDepartAlert",
+                                         description="Chime when the car ahead pulls away while you're stopped.")
     record_front = BigParamControl("record & upload cabin camera", "RecordFront",
                                    description_icon=gui_app.texture("icons_mici/settings/device/cameras.png", 64, 64),
                                    toggle_callback=restart_needed_callback, description="Upload cabin camera data to help improve driver monitoring.")
@@ -47,6 +51,8 @@ class TogglesLayoutMici(NavScroller):
       is_metric_toggle,
       ldw_toggle,
       always_on_dm_toggle,
+      green_light_toggle,
+      lead_depart_toggle,
       record_front,
       record_mic,
       enable_openpilot,
@@ -58,6 +64,8 @@ class TogglesLayoutMici(NavScroller):
       ("IsMetric", is_metric_toggle),
       ("IsLdwEnabled", ldw_toggle),
       ("AlwaysOnDM", always_on_dm_toggle),
+      ("GreenLightAlert", green_light_toggle),
+      ("LeadDepartAlert", lead_depart_toggle),
       ("RecordFront", record_front),
       ("RecordAudio", record_mic),
       ("OpenpilotEnabledToggle", enable_openpilot),
