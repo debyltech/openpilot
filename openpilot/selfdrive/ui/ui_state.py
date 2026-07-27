@@ -111,6 +111,7 @@ class UIState:
     self.personality: log.LongitudinalPersonality = log.LongitudinalPersonality.standard
     self.has_longitudinal_control: bool = False
     self.is_body: bool | None = False
+    self.always_show_max_speed: bool = False
     self.CP: car.CarParams | None = None
     self.light_sensor: float = -1.0
     self.radar_monitor = BoschRadarMonitor()
@@ -287,6 +288,8 @@ class UIState:
         self.usb_connected = False
         self.usb_connected_ts = None
         self.usb_unknown = False
+    # Raw key, not an import of NAPParamKeys (Tesla-pre-AP-specific): this file reads settings by literal key.
+    self.always_show_max_speed = self.params.get_bool("NAPAlwaysShowMaxSpeed")
     try:
       self.radar_hud = self.params.get_bool("NAPRadarHud")
     except Exception:
