@@ -103,6 +103,7 @@ class HudRenderer(Widget):
     self.is_cruise_set: bool = False
     self.is_cruise_available: bool = True
     self.set_speed: float = SET_SPEED_NA
+    self.follow_distance: int = 0
     self._set_speed_changed_time: float = 0
     self.speed: float = 0.0
     self.v_ego_cluster_seen: bool = False
@@ -169,6 +170,7 @@ class HudRenderer(Widget):
     self._engaged = engaged
     self.set_speed = set_speed
     self.is_cruise_set = 0 < self.set_speed < SET_SPEED_NA
+    self.follow_distance = sm['longitudinalPlan'].napFollowDistance  # 0 = not a NAP pedal car
     self.is_cruise_available = self.set_speed != -1
 
     v_ego_cluster = car_state.vEgoCluster
@@ -305,6 +307,17 @@ class HudRenderer(Widget):
       0,
       max_color,
     )
+
+    # NAP follow distance (1 close .. 7 far) under MAX; shown with the box, so "always show max speed" keeps it up
+    if self.follow_distance:
+      rl.draw_text_ex(
+        self._font_semi_bold,
+        f"GAP {self.follow_distance}",
+        rl.Vector2(x + 25, y + FONT_SIZES.set_speed - 7 + 4 + FONT_SIZES.max_speed + 2),
+        FONT_SIZES.max_speed,
+        0,
+        max_color,
+      )
 
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
     """Draw the current vehicle speed and unit."""

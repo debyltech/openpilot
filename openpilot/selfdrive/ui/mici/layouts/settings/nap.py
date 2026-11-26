@@ -196,6 +196,26 @@ class NAPLayoutMici(NavScroller):
     # while onroad.
 
     # ── Longitudinal control ─────────────────────────
+    # Follow gap (s) per NAPFollowDistance 1..7, from long_mpc.NAP_T_FOLLOW. The planner re-reads it
+    # about once a second, so changes apply while driving; the stalk dial no longer overwrites it.
+    follow_distance = BigMultiValueParamToggle(
+      "follow distance",
+      NAPParamKeys.FOLLOW_DISTANCE,
+      values=list(range(1, 8)),
+      labels=[f"{n} · {0.7 + 0.2 * (n - 1):.1f} s" for n in range(1, 8)],
+      default_value=4,
+    )
+
+    # How hard the pedal lifts into regen for a decel request, and how firmly it pulls back past
+    # the set speed. Stronger also prompts BRAKE earlier. Read live by the car controller.
+    regen_profile = BigMultiValueParamToggle(
+      "regen braking",
+      NAPParamKeys.REGEN_PROFILE,
+      values=[0, 1, 2],
+      labels=["relaxed", "standard", "aggressive"],
+      default_value=1,
+    )
+
     pedal_enabled = BigParamControl("pedal interceptor", NAPParamKeys.PEDAL_ENABLED,
                                      toggle_callback=_reboot_on_toggle)
     pedal_enabled.set_enabled(ui_state.is_offroad)
@@ -273,6 +293,8 @@ class NAPLayoutMici(NavScroller):
     restore_epas_btn.set_enabled(ui_state.is_offroad)
 
     self._scroller.add_widgets([
+      follow_distance,
+      regen_profile,
       pedal_enabled,
       adaptive_accel,
       pedal_can_bus,
