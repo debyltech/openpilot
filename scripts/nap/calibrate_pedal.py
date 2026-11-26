@@ -41,6 +41,13 @@ BRAKE_APPLIED = 2
 BRAKE_NOT_APPLIED = 1
 PEDAL_CONNECT_RETRIES = 8
 PEDAL_CONNECT_DELAY = 0.25
+# Max detection. A pedal whose command ceiling sits below the car's 100 % point never reports
+# 99.6 % (the de Byl interceptor caps track 1 at 4.0 V and the DI stops at 99.2 %), so a
+# plateau at full throttle is accepted as the max instead of climbing forever.
+PEDAL_MAX_DI = 99.6
+PEDAL_PLATEAU_MIN_DI = 98.0  # % the plateau must reach to count as full throttle
+PEDAL_PLATEAU_SPAN = 10.0  # command units with no DI increase that make a plateau
+PEDAL_MAX_SWEEP = 200.0  # abort if the command climbs this far above pedal min (floored ~100)
 
 
 def current_time_ms() -> int:
@@ -206,6 +213,8 @@ class PedalCalibrator:
     self.pedal_pressed_value = -1000.0
     self.pedal_max_value = -1000.0
     self.pedal_step = 0
+    self.max_seen_di = 0.0
+    self.max_seen_cmd = 0.0
 
     self.finetuning_stage = 0
     self.finetuning_target = 99.6
@@ -304,7 +313,7 @@ class PedalCalibrator:
               self.speed_ms = speed
               self.speed_seen_ms = now_ms
         if addr == GAS_SENSOR_ID and bus == self.pedal_can and len(dat) > 4:
-          self.pedal_interceptor_state = (dat[4] >> 7) & 0x01
+          self.pedal_interceptor_state = (dat[4] >> 4) & 0x0F  # STATE high nibble, as tesla_preap.dbc
           self.pedal_interceptor_value = ((dat[0] << 8) + dat[1]) * PEDAL_M1 + PEDAL_D
           self.rcv_pedal_idx = dat[4] & 0x0F
           self.last_pedal_seen_ms = now_ms
@@ -370,7 +379,18 @@ class PedalCalibrator:
         p(f"  Reading zero: {self.pedal_zero_count}/{self.pedal_zero_values_to_read} (val={self.pedal_interceptor_value:.2f})")
 
     elif self.status == 3:
-      if self.di_gas >= 99.6 and self.pedal_max_value == -1000 and self.pedal_step == 1:
+      if self.pedal_step == 1 and self.di_gas > self.max_seen_di:
+        self.max_seen_di = self.di_gas
+        self.max_seen_cmd = self.pedal_last_value_sent
+      plateau = (self.max_seen_di >= PEDAL_PLATEAU_MIN_DI and
+                 self.pedal_last_value_sent - self.max_seen_cmd >= PEDAL_PLATEAU_SPAN)
+      if not plateau and self.pedal_last_value_sent - self.pedal_min > PEDAL_MAX_SWEEP:
+        raise PedalCalibrationError(f"car never reached full throttle (max {self.max_seen_di:.1f}%)")
+      if (self.di_gas >= PEDAL_MAX_DI or plateau) and self.pedal_max_value == -1000 and self.pedal_step == 1:
+        if self.di_gas < PEDAL_MAX_DI:
+          p(f"\n  Car tops out at {self.max_seen_di:.1f}%")
+          self.pedal_last_value_sent = self.max_seen_cmd
+          self.finetuning_target = self.max_seen_di
         p(f"\n  Pedal MAX: {self.pedal_last_value_sent:.2f}")
         self.pedal_max_value = self.pedal_last_value_sent
         self.pedal_last_value_sent = self.pedal_max_value - 0.5
@@ -380,14 +400,15 @@ class PedalCalibrator:
       if self.di_gas > 0 and self.pedal_pressed_value == -1000 and self.pedal_step == 1:
         p(f"\n  Pedal PRESSED threshold: {self.pedal_last_value_sent:.2f}")
         self.pedal_pressed_value = self.pedal_last_value_sent
-      if self.di_gas < 100:
-        if self.frame % 50 == 0:
-          p(f"  Detecting: sent {self.pedal_last_value_sent:.1f} -> car sees {self.di_gas:.1f}%")
-        if self.pedal_step == 1:
+      if self.di_gas < 100 and self.frame % 50 == 0:
+        p(f"  Detecting: sent {self.pedal_last_value_sent:.1f} -> car sees {self.di_gas:.1f}%")
+      # keep toggling at 100 %: a jump straight to 100 on the hold step must still reach the max check
+      if self.pedal_step == 1:
+        if self.di_gas < 100:
           self.pedal_last_value_sent += 1
-          self.pedal_step = 0
-        else:
-          self.pedal_step = 1
+        self.pedal_step = 0
+      else:
+        self.pedal_step = 1
 
     elif self.status == 4:
       if self.finetuning_count < self.finetuning_steps:

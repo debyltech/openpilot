@@ -457,3 +457,50 @@ def test_calibration_safety_param_matches_native_island():
   assert calibration_safety_param(2) == 64
   assert calibration_safety_param(0) == 96
   assert SAFETY_TESLA_PREAP == 37
+
+
+def _sweep_to_max(plateau_di, pressed=20.0, full=100.0, steps=1000):
+  """Run the max-detection stage against a plant whose DI reading tops out at plateau_di."""
+  cal = PedalCalibrator(RecordingParams(), RecvSession(), bus=2)
+  cal.status = 3
+  cal.pedal_interceptor_state = 0
+  cal.pedal_min = 0.5
+  cal.pedal_last_value_sent = cal.pedal_min
+  for _ in range(steps):
+    cmd = cal.pedal_last_value_sent
+    cal.di_gas = min(plateau_di, max(0.0, round((cmd - pressed) / (full - pressed) * 250) * 0.4))
+    cal._advance_on_pedal_message()
+    if cal.status == 4:
+      return cal
+  return cal
+
+
+def test_max_detection_reaching_99_6_is_unchanged():
+  cal = _sweep_to_max(plateau_di=100.0)
+  assert cal.status == 4
+  assert cal.finetuning_target == pytest.approx(99.6)
+  assert cal.pedal_max_value == pytest.approx(99.5, abs=1.0)
+
+
+def test_max_detection_accepts_a_car_that_tops_out_at_99_2():
+  cal = _sweep_to_max(plateau_di=99.2)
+  assert cal.status == 4
+  assert cal.finetuning_target == pytest.approx(99.2)
+  assert cal.max_seen_di == pytest.approx(99.2)
+  # max is the first command that reached the plateau, not where the sweep stopped
+  assert cal.pedal_max_value == pytest.approx(cal.max_seen_cmd)
+  assert cal.pedal_max_value < 100.5
+
+
+def test_max_detection_aborts_when_the_car_never_reaches_full_throttle():
+  with pytest.raises(PedalCalibrationError, match="never reached full throttle"):
+    _sweep_to_max(plateau_di=50.0)
+
+
+def test_gas_sensor_state_is_the_high_nibble():
+  # firmware/DBC vector: state 5, counter 10 -> byte 4 0x5a
+  session = RecvSession([(0x552, bytes.fromhex("01d600fa5a82"), 2)])
+  cal = PedalCalibrator(RecordingParams(), session, bus=2)
+  cal.process_can()
+  assert cal.pedal_interceptor_state == 5
+  assert cal.rcv_pedal_idx == 10
