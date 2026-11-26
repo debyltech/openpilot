@@ -120,19 +120,19 @@ class MiciMainLayout(Scroller):
         self._scroll_to(self._home_layout)
 
     # FIXME: these two pops can interrupt user interacting in the settings
-    if self._onroad_time_delay is not None and rl.get_time() - self._onroad_time_delay >= ONROAD_DELAY:
-      gui_app.pop_widgets_to(self, lambda: self._scroll_to(self._onroad_layout))
-      self._onroad_time_delay = None
-
-    # When car leaves standstill, pop nav stack and scroll to onroad
     CS = ui_state.sm["carState"]
-    if not CS.standstill and self._prev_standstill:
-      gui_app.pop_widgets_to(self, lambda: self._scroll_to(self._onroad_layout))
+    onroad_pop = self._onroad_time_delay is not None and rl.get_time() - self._onroad_time_delay >= ONROAD_DELAY
+    moving_pop = not CS.standstill and self._prev_standstill
     self._prev_standstill = CS.standstill
+    if onroad_pop or moving_pop:
+      self._onroad_time_delay = None
+      # A NAP script (pedal calibration, EPAS flash) holds driving paused; its screen has the only exit.
+      if not ui_state.params.get_bool("NAPScriptRunning"):
+        gui_app.pop_widgets_to(self, lambda: self._scroll_to(self._onroad_layout))
 
   def _on_interactive_timeout(self):
-    # Don't pop if onboarding
-    if gui_app.widget_in_stack(self._onboarding_window):
+    # Don't pop if onboarding, or while a NAP script holds driving paused (its screen has the only exit)
+    if gui_app.widget_in_stack(self._onboarding_window) or ui_state.params.get_bool("NAPScriptRunning"):
       return
 
     if ui_state.started:

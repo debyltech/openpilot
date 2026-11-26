@@ -89,14 +89,15 @@ def wizard_layout(width: float, height: float, *, ready: bool, show_start: bool,
   """Pixel layout for the pedal wizard. Tested at 536x240 and 2160x1080."""
   compact = is_compact_canvas(width, height)
   margin = 6 if compact else 50
-  title_font_size = 16 if compact else 70
-  text_font_size = 13 if compact else 45
-  output_font_size = 12 if compact else 35
-  line_height = 15 if compact else 45
-  button_font_size = 12 if compact else 45
+  # compact sizes were 12-16 px, unreadable on the comma four in a car
+  title_font_size = 26 if compact else 70
+  text_font_size = 20 if compact else 45
+  output_font_size = 19 if compact else 35
+  line_height = 21 if compact else 45
+  button_font_size = 20 if compact else 45
   button_height = 44 if compact else 110
   button_spacing = 6 if compact else 30
-  bus_width = 52 if compact else 160
+  bus_width = 72 if compact else 160
   action_width = 128 if compact else 350
   title_gap = 4 if compact else margin
   title_y = 2 if compact else margin
@@ -527,7 +528,7 @@ def make_pedal_wizard_widget(title: str, module: str, instructions: str, *,
       self._title_font = None
       self.last_layout = None
       compact = not gui_app.big_ui()
-      font = 12 if compact else 45
+      font = 20 if compact else 45
       pad = 2 if compact else 16
       radius = 6 if compact else 10
       self._start_button = self._child(Button("Start", click_callback=self._on_start,
@@ -540,6 +541,17 @@ def make_pedal_wizard_widget(title: str, module: str, instructions: str, *,
                                              font_size=font, text_padding=pad, border_radius=radius))
       self._bus2_button = self._child(Button("Bus 2", click_callback=lambda: self.controller.select_bus(2),
                                              font_size=font, text_padding=pad, border_radius=radius))
+
+    def show_event(self):
+      super().show_event()
+      # keep the screen on while calibrating: offroad, the idle timeout blanks it and pops this widget
+      from openpilot.selfdrive.ui.ui_state import device
+      device.set_override_interactive_timeout(3600)
+
+    def hide_event(self):
+      super().hide_event()
+      from openpilot.selfdrive.ui.ui_state import device
+      device.set_override_interactive_timeout(None)
 
     def _on_start(self):
       if self.controller.restart_visible:
