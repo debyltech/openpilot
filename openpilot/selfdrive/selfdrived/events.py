@@ -986,7 +986,8 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       "",
       AlertStatus.normal, AlertSize.full,
       Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-    ET.USER_DISABLE: ImmediateDisableAlert("Reverse Gear"),
+    # shifting into reverse is the driver taking over: plain disengage, not "take control immediately"
+    ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
     ET.NO_ENTRY: NoEntryAlert("Reverse Gear"),
   },
 
@@ -1187,7 +1188,8 @@ if HARDWARE.get_device_type() == 'mici':
         "",
         AlertStatus.normal, AlertSize.full,
         Priority.LOWEST, VisualAlert.none, AudibleAlert.none, .2, creation_delay=0.5),
-      ET.USER_DISABLE: ImmediateDisableAlert("Reverse"),
+      # shifting into reverse is the driver taking over: plain disengage, not "take control immediately"
+      ET.USER_DISABLE: EngagementAlert(AudibleAlert.disengage),
       ET.NO_ENTRY: NoEntryAlert("Reverse"),
     },
   })
