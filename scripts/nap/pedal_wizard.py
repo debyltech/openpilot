@@ -38,7 +38,7 @@ def waiting_status_text(reason: str) -> str:
 
 
 def _pedal_submaster():
-  from cereal import messaging
+  from openpilot.cereal import messaging
   return messaging.SubMaster(
     ["deviceState", "pandaStates", "carState", "selfdriveState", "managerState", "can"]
   )
@@ -184,7 +184,7 @@ def spawn_pedal_calibrator(module: str, params: Params | None = None, *, bus: in
 
 
 def _default_reboot() -> None:
-  from openpilot.system.hardware import HARDWARE, PC
+  from openpilot.common.hardware import HARDWARE, PC
   if not PC:
     HARDWARE.reboot()
 

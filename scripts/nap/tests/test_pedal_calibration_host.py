@@ -456,7 +456,7 @@ def test_wait_for_manager_release_requires_stopped_processes():
 def test_calibration_safety_param_matches_native_island():
   assert calibration_safety_param(2) == 64
   assert calibration_safety_param(0) == 96
-  assert SAFETY_TESLA_PREAP == 37
+  assert SAFETY_TESLA_PREAP == 40  # past upstream volvo 36, bmw 37, mg 38
 
 
 def _sweep_to_max(plateau_di, pressed=20.0, full=100.0, steps=1000):

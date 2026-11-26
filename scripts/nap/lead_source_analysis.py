@@ -19,7 +19,7 @@ def read_events(path):
     with open(path, 'rb') as f:
         raw = dctx.decompress(f.read(), max_output_size=500 * 1024 * 1024)
     try:
-        from cereal import log as cereal_log
+        from openpilot.cereal import log as cereal_log
         events = list(cereal_log.Event.read_multiple_bytes(raw))
         print(f" {len(events)} events", flush=True)
         return events
@@ -71,7 +71,7 @@ def read_events(path):
 def analyze(log_paths):
     paths = sorted(log_paths)[:5]
 
-    rs_data = []      # (time, leadOne.status, leadOne.radar, leadOne.dRel, leadOne.radarTrackId, valid)
+    rs_data = []      # (time, leadOne.present, leadOne.radar, leadOne.dRel, leadOne.radarTrackId, valid)
     lp_data = []      # (time, hasLead, source, aDesired)
     lt_data = []      # (time, n_points)
 
@@ -91,8 +91,8 @@ def analyze(log_paths):
                 lp_data.append((mono, lp.hasLead, str(lp.longitudinalPlanSource),
                                lp.accels[0] if len(lp.accels) > 0 else 0.0, evt.valid))
 
-            elif which == 'liveTracks':
-                lt = evt.liveTracks
+            elif which == 'radarTracks':
+                lt = evt.radarTracks
                 lt_data.append((mono, len(lt.points)))
 
     print(f"\n{'='*70}")
@@ -110,7 +110,7 @@ def analyze(log_paths):
         print(f"\n  radarState frames: {len(rs_data)}")
         print(f"    valid:                {n_valid} ({100*n_valid/len(rs_data):.1f}%)")
         print(f"    invalid:              {n_invalid} ({100*n_invalid/len(rs_data):.1f}%)")
-        print(f"    leadOne.status=True:  {n_status} ({100*n_status/len(rs_data):.1f}%)")
+        print(f"    leadOne.present=True:  {n_status} ({100*n_status/len(rs_data):.1f}%)")
         print(f"    leadOne.radar=True:   {n_radar} ({100*n_status/len(rs_data) if n_status else 0:.1f}% of total)")
         print(f"    leadOne.radar=False:  {n_vision} (vision-only)")
 

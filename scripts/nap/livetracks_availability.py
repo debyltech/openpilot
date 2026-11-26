@@ -29,7 +29,7 @@ def read_events_all(path):
         raw = dctx.decompress(f.read(), max_output_size=500 * 1024 * 1024)
 
     try:
-        from cereal import log as cereal_log
+        from openpilot.cereal import log as cereal_log
         events = list(cereal_log.Event.read_multiple_bytes(raw))
         print(f" {len(events)} events", flush=True)
         return events
@@ -110,13 +110,13 @@ def analyze(log_paths):
 
             all_event_types[which] += 1
 
-            if which == 'liveTracks':
+            if which == 'radarTracks':
                 lt_times.append(mono)
                 try:
                     if isinstance(evt, dict) and '_raw' in evt:
-                        lt = evt['_raw'].liveTracks
+                        lt = evt['_raw'].radarTracks
                     else:
-                        lt = evt.liveTracks
+                        lt = evt.radarTracks
                     pts = list(lt.points)
                     lt_n_points.append(len(pts))
                 except Exception:
@@ -201,7 +201,7 @@ def analyze(log_paths):
         print(f"    Ratio (RS/LT):        {rs_rate/max(lt_rate, 0.1):.1f}x")
         print()
         print("  CRITICAL: radard polls on modelV2 (~20Hz) and only calls")
-        print("  RD.update() when sm.updated['liveTracks'] is True.")
+        print("  RD.update() when sm.updated['radarTracks'] is True.")
         print(f"  If liveTracks rate is {lt_rate:.0f}Hz but radarState is {rs_rate:.0f}Hz,")
         print(f"  then {rs_rate/max(lt_rate, 0.1):.1f}x radarState frames run with STALE liveTracks.")
         print("  radard ALWAYS publishes on every modelV2 cycle, but only")

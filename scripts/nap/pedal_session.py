@@ -106,7 +106,7 @@ def wait_for_manager_release(sm=None, *, timeout_s=OWNERSHIP_TIMEOUT_S,
 
   NAPScriptRunning must already be set. Does not invent a manager ack param.
   """
-  from cereal import messaging
+  from openpilot.cereal import messaging
   sm = sm or messaging.SubMaster(["managerState"])
   deadline = now() + timeout_s
   while now() < deadline:

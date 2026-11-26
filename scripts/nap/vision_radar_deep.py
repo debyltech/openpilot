@@ -35,7 +35,7 @@ def read_events(path):
         raw = dctx.decompress(f.read(), max_output_size=500 * 1024 * 1024)
 
     try:
-        from cereal import log as cereal_log
+        from openpilot.cereal import log as cereal_log
         events = list(cereal_log.Event.read_multiple_bytes(raw))
         print(f" {len(events)} events (cereal)", flush=True)
         return events
@@ -111,8 +111,8 @@ def read_events(path):
                         'dRel': float(l1.dRel), 'radar': bool(l1.radar),
                         'status': bool(l1.status), 'radarTrackId': int(l1.radarTrackId),
                     })
-                elif w == 'liveTracks':
-                    lt = event.liveTracks
+                elif w == 'radarTracks':
+                    lt = event.radarTracks
                     points = []
                     for pt in lt.points:
                         points.append({
@@ -121,7 +121,7 @@ def read_events(path):
                             'measured': bool(pt.measured),
                         })
                     events.append({
-                        'which': 'liveTracks', 'logMonoTime': mono,
+                        'which': 'radarTracks', 'logMonoTime': mono,
                         'points': points,
                     })
                 elif w == 'carState':
@@ -180,7 +180,7 @@ def analyze(log_paths):
         elif which == 'modelV2':
             model_by_time[mono] = evt
 
-        elif which == 'liveTracks':
+        elif which == 'radarTracks':
             pts = evt['points'] if isinstance(evt, dict) else []
             live_tracks_latest = pts
 

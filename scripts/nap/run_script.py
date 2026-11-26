@@ -26,7 +26,7 @@ import pyray as rl
 sys.path.insert(0, '/data/openpilot')
 
 from openpilot.common.params import Params
-from openpilot.system.hardware import HARDWARE, PC
+from openpilot.common.hardware import HARDWARE, PC
 
 PEDAL_STANDALONE_MODULES = frozenset({"scripts.nap.calibrate_pedal", "calibrate_pedal"})
 

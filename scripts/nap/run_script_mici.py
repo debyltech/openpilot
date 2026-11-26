@@ -19,7 +19,7 @@ import sys
 import threading
 
 from openpilot.common.params import Params
-from openpilot.system.hardware import HARDWARE, PC
+from openpilot.common.hardware import HARDWARE, PC
 from openpilot.system.ui.mici.widgets.script_runner_app import MiciScriptRunnerApp, ScriptState
 
 

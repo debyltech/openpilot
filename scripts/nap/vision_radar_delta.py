@@ -36,7 +36,7 @@ def read_events(path):
 
     # Try cereal module first (faster)
     try:
-        from cereal import log as cereal_log
+        from openpilot.cereal import log as cereal_log
         events = list(cereal_log.Event.read_multiple_bytes(raw))
         print(f" {len(events)} events (cereal)", flush=True)
         return events
