@@ -79,7 +79,7 @@ class TestAlerts(OpenpilotTestCase):
       assert alert.alert_text_1 == "Brake"
       assert alert.alert_size == AlertSize.mid
       assert alert.visual_alert == car.CarControl.HUDControl.VisualAlert.brakePressed
-      assert alert.audible_alert == (AudibleAlert.prompt if name == log.OnroadEvent.EventName.pedalMaxRegen else AudibleAlert.warningSoft)
+      assert alert.audible_alert == (AudibleAlert.preAlert if name == log.OnroadEvent.EventName.pedalMaxRegen else AudibleAlert.warningSoft)
       assert alert.duration == int(0.2 / DT_CTRL)
 
   def test_preap_pedal_cruise_alerts_fire_while_disabled(self):

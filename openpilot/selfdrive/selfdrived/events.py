@@ -1051,14 +1051,14 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       Priority.HIGH, VisualAlert.none, AudibleAlert.disengage, 0.8),
   },
 
-  # Regen can't deliver the planned decel (approaching too fast, or cold/weak regen). One chime, not
+  # Regen can't deliver a real braking need (closing on a lead too fast). One light pre-alert chime, not
   # the looping warningSoft that ramps to full volume: the car just coasts, the driver decides.
   EventName.pedalMaxRegen: {
     ET.WARNING: Alert(
       "Brake",
       "regen limit",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.HIGH, VisualAlert.brakePressed, AudibleAlert.prompt, .2),
+      Priority.HIGH, VisualAlert.brakePressed, AudibleAlert.preAlert, .2),
   },
 
   # The plan intends to stop (e.g. experimental mode at a red light); regen alone can't stop or hold.
