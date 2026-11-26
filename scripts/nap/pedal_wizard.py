@@ -545,13 +545,15 @@ def make_pedal_wizard_widget(title: str, module: str, instructions: str, *,
     def show_event(self):
       super().show_event()
       # keep the screen on while calibrating: offroad, the idle timeout blanks it and pops this widget
-      from openpilot.selfdrive.ui.ui_state import device
+      from openpilot.selfdrive.ui.ui_state import device, ui_state
       device.set_override_interactive_timeout(3600)
+      ui_state.nap_wizard_open = True  # mici main layout must not pop us when the car turns on
 
     def hide_event(self):
       super().hide_event()
-      from openpilot.selfdrive.ui.ui_state import device
+      from openpilot.selfdrive.ui.ui_state import device, ui_state
       device.set_override_interactive_timeout(None)
+      ui_state.nap_wizard_open = False
 
     def _on_start(self):
       if self.controller.restart_visible:

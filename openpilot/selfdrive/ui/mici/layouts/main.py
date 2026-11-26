@@ -126,13 +126,15 @@ class MiciMainLayout(Scroller):
     self._prev_standstill = CS.standstill
     if onroad_pop or moving_pop:
       self._onroad_time_delay = None
-      # A NAP script (pedal calibration, EPAS flash) holds driving paused; its screen has the only exit.
-      if not ui_state.params.get_bool("NAPScriptRunning"):
+      # Keep the pedal wizard up: before Start it waits for ignition (turning the car on would pop it),
+      # and while a NAP script runs it holds driving paused and has the only exit.
+      if not (ui_state.nap_wizard_open or ui_state.params.get_bool("NAPScriptRunning")):
         gui_app.pop_widgets_to(self, lambda: self._scroll_to(self._onroad_layout))
 
   def _on_interactive_timeout(self):
     # Don't pop if onboarding, or while a NAP script holds driving paused (its screen has the only exit)
-    if gui_app.widget_in_stack(self._onboarding_window) or ui_state.params.get_bool("NAPScriptRunning"):
+    if (gui_app.widget_in_stack(self._onboarding_window) or ui_state.nap_wizard_open or
+        ui_state.params.get_bool("NAPScriptRunning")):
       return
 
     if ui_state.started:

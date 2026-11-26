@@ -112,6 +112,7 @@ class UIState:
     self.has_longitudinal_control: bool = False
     self.is_body: bool | None = False
     self.always_show_max_speed: bool = False
+    self.nap_wizard_open: bool = False  # pedal calibration wizard on screen (set by the wizard)
     self.CP: car.CarParams | None = None
     self.light_sensor: float = -1.0
     self.radar_monitor = BoschRadarMonitor()
