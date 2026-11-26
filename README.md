@@ -1,3 +1,17 @@
+> **de Byl Technologies fork** of [NotAutopilot](https://github.com/NotAutopilot/openpilot) for a pre-AP
+> Model S with the de Byl pedal interceptor. comma four only.
+>
+> - **Install:** on the comma, *Custom Software* → `nap.debyltech.com`
+>   (or `installer.comma.ai/debyltech/release`). Test builds: `debyltech/release-staging`.
+> - **Interceptor firmware:** needs the build that sends GAS_SENSOR STATE in the high nibble
+>   (comma pedal order). Older builds are not seen by this branch.
+> - **Differs from NAP:** NAP nap-dev merged onto upstream openpilot v0.11.2; pedal calibration
+>   accepts a car that tops out below 99.6 % and aborts on runaway; regen braking profiles
+>   (relaxed / standard / aggressive); follow distance first in the NAP menu, never overwritten by
+>   the stalk, with a GAP readout; BRAKE chime on regen limits and planned stops; stalk-button TX
+>   whitelist in panda safety; green-light / lead-departure chimes and "always show max speed"
+>   from Brennan Coslett's fork. No no-pedal ACC.
+
 <div align="center">
 
 <h1>NotAutopilot</h1>
