@@ -21,7 +21,7 @@ from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
 from openpilot.selfdrive.selfdrived.events import Events, ET
 from openpilot.selfdrive.selfdrived.green_light import GreenLightHelper
 from openpilot.selfdrive.selfdrived.helpers import ExcessiveActuationCheck
-from openpilot.selfdrive.selfdrived.preap_regen import PreAPChimeState, RegenDemandCheck, update_preap_chimes
+from openpilot.selfdrive.selfdrived.preap_regen import PreAPChimeState, RegenDemandCheck, planned_stop_needs_brake, update_preap_chimes
 from openpilot.selfdrive.selfdrived.state import StateMachine
 from openpilot.selfdrive.selfdrived.alertmanager import AlertManager, set_offroad_alert
 
@@ -278,6 +278,9 @@ class SelfdriveD:
         )
         if getattr(CS, 'pedalMaxRegen', False) or regen_demand_overflow:
           self.events.add(EventName.pedalMaxRegen)
+        elif planned_stop_needs_brake(pedal_long_active=pedal_long_active,
+                                      should_stop=self.sm['longitudinalPlan'].shouldStop, v_ego=CS.vEgo):
+          self.events.add(EventName.pedalPlannedStop)
       else:
         self.prev_preap_chimes = PreAPChimeState()
 

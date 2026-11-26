@@ -24,6 +24,12 @@ REGEN_DEMAND_TRIGGER_MARGIN = 0.2  # m/s² below the envelope floor
 REGEN_DEMAND_CLEAR_MARGIN = 0.05  # m/s²
 REGEN_DEMAND_MIN_SPEED = 2.0  # m/s; do not prompt for a stopped/settling car
 REGEN_DEMAND_CLEAR_SPEED = 1.0  # m/s
+PLANNED_STOP_MIN_SPEED = 2.0  # m/s; below this the car is already stopping on the driver's brake
+
+
+def planned_stop_needs_brake(*, pedal_long_active: bool, should_stop: bool, v_ego: float) -> bool:
+  """The plan intends to stop while moving: regen alone can't stop or hold the car."""
+  return pedal_long_active and should_stop and v_ego > PLANNED_STOP_MIN_SPEED
 
 
 class PreAPChimeState(NamedTuple):

@@ -1,6 +1,7 @@
 import pytest
 
 from openpilot.selfdrive.selfdrived.preap_regen import (
+  planned_stop_needs_brake,
   REGEN_DEMAND_EVIDENCE_COUNT,
   PreAPChimeState,
   RegenDemandCheck,
@@ -224,3 +225,13 @@ def test_stronger_regen_profile_prompts_earlier(monkeypatch):
   for _ in range(3 * REGEN_DEMAND_EVIDENCE_COUNT):
     fired = _update(check, a_target=-1.5) or fired
   assert fired
+
+
+@pytest.mark.parametrize("active, should_stop, v_ego, expected", [
+  (True, True, 10.0, True),    # moving, plan wants to stop: brake prompt
+  (True, True, 1.5, False),    # already crawling to a stop
+  (True, False, 10.0, False),  # no stop planned
+  (False, True, 10.0, False),  # pedal long not active
+])
+def test_planned_stop_prompts_brake_only_while_moving(active, should_stop, v_ego, expected):
+  assert planned_stop_needs_brake(pedal_long_active=active, should_stop=should_stop, v_ego=v_ego) is expected

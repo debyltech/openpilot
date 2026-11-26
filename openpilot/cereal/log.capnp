@@ -143,6 +143,7 @@ struct OnroadEvent @0xc4fa6047f024e718 {
     pedalUnavailable @112;
     greenLightChime @113;
     leadDepartChime @114;
+    pedalPlannedStop @115;
 
     lowBatteryDEPRECATED @40;
     soundsUnavailableDEPRECATED @47;

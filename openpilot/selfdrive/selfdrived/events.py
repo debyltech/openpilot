@@ -1050,12 +1050,23 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       Priority.HIGH, VisualAlert.none, AudibleAlert.disengage, 0.8),
   },
 
+  # Regen can't deliver the planned decel (approaching too fast, or cold/weak regen). Same urgent
+  # warningSoft chime and short mici-sized text as Brennan Coslett's no-pedal-ACC brake hand-off.
   EventName.pedalMaxRegen: {
     ET.WARNING: Alert(
-      "Regen Limit Reached",
-      "Press Brake to Slow Down",
+      "Brake",
+      "regen limit",
       AlertStatus.userPrompt, AlertSize.mid,
-      Priority.HIGH, VisualAlert.brakePressed, AudibleAlert.promptRepeat, .2),
+      Priority.HIGH, VisualAlert.brakePressed, AudibleAlert.warningSoft, .2),
+  },
+
+  # The plan intends to stop (e.g. experimental mode at a red light); regen alone can't stop or hold.
+  EventName.pedalPlannedStop: {
+    ET.WARNING: Alert(
+      "Brake",
+      "stopping ahead",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.HIGH, VisualAlert.brakePressed, AudibleAlert.warningSoft, .2),
   },
 
   EventName.teslaCCEngaged: {

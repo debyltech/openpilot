@@ -74,12 +74,13 @@ class TestAlerts(OpenpilotTestCase):
   def test_preap_regen_alert_tells_driver_to_brake(self):
     alert = EVENTS[log.OnroadEvent.EventName.pedalMaxRegen][ET.WARNING]
 
-    assert alert.alert_text_1 == "Regen Limit Reached"
-    assert alert.alert_text_2 == "Press Brake to Slow Down"
-    assert alert.alert_size == AlertSize.mid
-    assert alert.visual_alert == car.CarControl.HUDControl.VisualAlert.brakePressed
-    assert alert.audible_alert == AudibleAlert.promptRepeat
-    assert alert.duration == int(0.2 / DT_CTRL)
+    for name in (log.OnroadEvent.EventName.pedalMaxRegen, log.OnroadEvent.EventName.pedalPlannedStop):
+      alert = EVENTS[name][ET.WARNING]
+      assert alert.alert_text_1 == "Brake"
+      assert alert.alert_size == AlertSize.mid
+      assert alert.visual_alert == car.CarControl.HUDControl.VisualAlert.brakePressed
+      assert alert.audible_alert == AudibleAlert.warningSoft
+      assert alert.duration == int(0.2 / DT_CTRL)
 
   def test_preap_pedal_cruise_alerts_fire_while_disabled(self):
     # ET.WARNING is omitted on the USER_DISABLE frame, so these must be
