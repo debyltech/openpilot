@@ -132,11 +132,11 @@ def _health_bytes(*, safety_mode=0, safety_param=0, heartbeat_lost=0,
   from panda import Panda
   n = len(Panda.HEALTH_STRUCT.unpack(bytes(Panda.HEALTH_STRUCT.size)))
   vals = [0] * n
-  vals[8] = ignition_line
-  vals[9] = ignition_can
-  vals[12] = safety_mode
-  vals[13] = safety_param
-  vals[16] = heartbeat_lost
+  vals[8] = ((Panda.HEALTH_FLAG_IGNITION_LINE if ignition_line else 0) |
+             (Panda.HEALTH_FLAG_IGNITION_CAN if ignition_can else 0) |
+             (Panda.HEALTH_FLAG_HEARTBEAT_LOST if heartbeat_lost else 0))
+  vals[10] = safety_mode
+  vals[11] = safety_param
   return Panda.HEALTH_STRUCT.pack(*vals)
 
 
@@ -504,3 +504,17 @@ def test_gas_sensor_state_is_the_high_nibble():
   cal.process_can()
   assert cal.pedal_interceptor_state == 5
   assert cal.rcv_pedal_idx == 10
+
+
+def test_read_health_decodes_like_panda_health():
+  # unrelated fields set high must not read as heartbeat loss or ignition (the v0.11.2 layout bug)
+  from panda import Panda
+  n = len(Panda.HEALTH_STRUCT.unpack(bytes(Panda.HEALTH_STRUCT.size)))
+  vals = [1] * n
+  vals[8] = Panda.HEALTH_FLAG_CONTROLS_ALLOWED
+  vals[10] = SAFETY_TESLA_PREAP
+  vals[11] = CALIBRATION_PARAM_BUS2
+  session = PedalCalibrationSession(panda=_usb_panda(UsbHandle(health=Panda.HEALTH_STRUCT.pack(*vals))))
+  health = session.read_health()
+  assert health == {"safety_mode": SAFETY_TESLA_PREAP, "safety_param": CALIBRATION_PARAM_BUS2,
+                    "heartbeat_lost": False, "ignition_line": False, "ignition_can": False}

@@ -311,13 +311,15 @@ class PedalCalibrationSession:
       dat = handle.controlRead(
         Panda.REQUEST_IN, HEALTH_REQUEST, 0, 0, health_struct.size, timeout=HEALTH_TIMEOUT_MS,
       )
+      # same layout as panda.Panda.health(): ignition/heartbeat are bits of the flags field
       a = health_struct.unpack(dat)
+      flags = a[8]
       return {
-        "safety_mode": a[12],
-        "safety_param": a[13],
-        "heartbeat_lost": a[16],
-        "ignition_line": a[8],
-        "ignition_can": a[9],
+        "safety_mode": a[10],
+        "safety_param": a[11],
+        "heartbeat_lost": bool(flags & Panda.HEALTH_FLAG_HEARTBEAT_LOST),
+        "ignition_line": bool(flags & Panda.HEALTH_FLAG_IGNITION_LINE),
+        "ignition_can": bool(flags & Panda.HEALTH_FLAG_IGNITION_CAN),
       }
     except TransportError:
       raise
