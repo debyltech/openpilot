@@ -19,7 +19,7 @@ from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
   get_stopped_equivalence_factor,
   get_T_FOLLOW,
 )
-from openpilot.selfdrive.controls.lib.longitudinal_planner import LongitudinalPlanner
+from openpilot.selfdrive.controls.lib.longitudinal_planner import NAP_FOLLOW_SETTLE_FRAMES, LongitudinalPlanner
 from openpilot.selfdrive.controls.tests.test_following_distance import run_following_distance_simulation
 from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
@@ -385,8 +385,8 @@ def test_planner_publishes_the_follow_policy_used_by_mpc():
   publisher = _CapturingPubMaster()
 
   params.nap_follow_dist = 7
-  planner._frame = 19
-  planner.update(inputs)
+  for _ in range(NAP_FOLLOW_SETTLE_FRAMES + 20):
+    planner.update(inputs)
   planner.publish(inputs, publisher)
 
   plan = publisher.message.longitudinalPlan
@@ -395,6 +395,28 @@ def test_planner_publishes_the_follow_policy_used_by_mpc():
   assert planner.t_follow == NAP_FOLLOW_TIMES_S[-1]
   assert np.all(planner.mpc.params[:, 4] == planner.t_follow)
   assert plan.tFollow == pytest.approx(planner.t_follow, abs=1e-6)
+
+
+def test_follow_distance_change_waits_for_the_selection_to_settle():
+  params = _MutablePlannerParams(nap_follow_dist=4)
+  planner = LongitudinalPlanner(_make_preap_params(), init_v=FOLLOW_TEST_SPEED_MPS, params=params)
+  inputs = _make_planner_inputs(FOLLOW_TEST_SPEED_MPS)
+
+  # cycling 5, 6, 7 one tap a second keeps the old gap
+  for setting in (5, 6, 7):
+    params.nap_follow_dist = setting
+    for _ in range(20):
+      planner.update(inputs)
+    assert planner.active_nap_follow_dist == 4
+
+  # 7 lands 4-5 s after the last tap, not before
+  for _ in range(NAP_FOLLOW_SETTLE_FRAMES - 40):
+    planner.update(inputs)
+  assert planner.active_nap_follow_dist == 4
+  for _ in range(40):
+    planner.update(inputs)
+  assert planner.active_nap_follow_dist == 7
+  assert planner.t_follow == NAP_FOLLOW_TIMES_S[-1]
 
 
 @pytest.mark.parametrize("nap_follow_dist", [-1, 0, 8])

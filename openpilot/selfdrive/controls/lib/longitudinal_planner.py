@@ -31,6 +31,10 @@ CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
 NAP_FOLLOW_DISTANCE_RANGE = range(1, 8)
+# A new follow distance applies only once the menu selection has held this long, so cycling through
+# the settings while driving doesn't jerk the car between gaps. The param is read once a second,
+# so a change lands 4-5 s after the last tap.
+NAP_FOLLOW_SETTLE_FRAMES = int(4.0 / DT_MDL)
 
 
 # Pre-AP follow-mode accel cap: imported lazily to avoid circular deps
@@ -99,6 +103,7 @@ class LongitudinalPlanner:
     self._params = Params() if params is None else params
     self.nap_follow_dist = self._params.get("NAPFollowDistance", return_default=True) if self._is_preap else None
     self.nap_adaptive_accel = self._params.get_bool("NAPAdaptiveAccel") if self._is_preap else False
+    self._nap_follow_setting, self._nap_follow_setting_frame = self.nap_follow_dist, 0
     self.active_nap_follow_dist = None
     self.t_follow = get_T_FOLLOW()
     self._frame = 0
@@ -115,7 +120,11 @@ class LongitudinalPlanner:
   def update(self, sm):
     self._frame += 1
     if self._is_preap and self._frame % 20 == 0:
-      self.nap_follow_dist = self._params.get("NAPFollowDistance", return_default=True)
+      setting = self._params.get("NAPFollowDistance", return_default=True)
+      if setting != self._nap_follow_setting:
+        self._nap_follow_setting, self._nap_follow_setting_frame = setting, self._frame
+      if self._frame - self._nap_follow_setting_frame >= NAP_FOLLOW_SETTLE_FRAMES:
+        self.nap_follow_dist = setting
       self.nap_adaptive_accel = self._params.get_bool("NAPAdaptiveAccel")
 
     if len(sm['carControl'].orientationNED) == 3:

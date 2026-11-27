@@ -196,8 +196,9 @@ class NAPLayoutMici(NavScroller):
     # while onroad.
 
     # ── Longitudinal control ─────────────────────────
-    # Follow gap (s) per NAPFollowDistance 1..7, from long_mpc.NAP_T_FOLLOW. The planner re-reads it
-    # about once a second, so changes apply while driving; the stalk dial no longer overwrites it.
+    # Follow gap (s) per NAPFollowDistance 1..7, from long_mpc.NAP_T_FOLLOW. The planner applies a
+    # change once the selection has held for 4 s (4-5 s after the last tap), so cycling through
+    # values while driving doesn't jerk the car; the stalk dial no longer overwrites it.
     follow_distance = BigMultiValueParamToggle(
       "follow distance",
       NAPParamKeys.FOLLOW_DISTANCE,
