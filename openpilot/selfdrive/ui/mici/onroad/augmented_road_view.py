@@ -10,6 +10,7 @@ from openpilot.selfdrive.ui.mici.onroad.driver_state import DriverStateRenderer
 from openpilot.selfdrive.ui.mici.onroad.hud_renderer import HudRenderer
 from openpilot.selfdrive.ui.mici.onroad.long_indicator import LongIndicator
 from openpilot.selfdrive.ui.mici.onroad.model_renderer import ModelRenderer
+from openpilot.selfdrive.ui.mici.onroad.speed_limit import SpeedLimitSign
 from openpilot.selfdrive.ui.mici.onroad.navigation import NavigationPanel, PANEL_WIDTH
 from openpilot.selfdrive.ui.radar.radar_view import RadarHudOverlay, radar_hud_rect
 from openpilot.selfdrive.ui.mici.onroad.confidence_ball import ConfidenceBall
@@ -178,6 +179,7 @@ class AugmentedRoadView(CameraView):
     self._navigation = NavigationPanel()
     self._model_renderer = ModelRenderer()
     self._hud_renderer = HudRenderer()
+    self._speed_limit_sign = SpeedLimitSign()
     self._long_indicator = LongIndicator()
     self._radar_hud = RadarHudOverlay()
     self._alert_renderer = AlertRenderer()
@@ -278,6 +280,9 @@ class AugmentedRoadView(CameraView):
                                                alert_to_render.visual_alert == car.CarControl.HUDControl.VisualAlert.steerRequired)
     self._alert_renderer.render(self._content_rect)
     self._hud_renderer.render(self._content_rect)
+    # top-right, engaged or not (manual driving too); alerts span the top, so hide under them
+    if alert_to_render is None:
+      self._speed_limit_sign.render(self._content_rect)
     self._radar_hud.render(radar_hud_rect(self._content_rect))
 
     # Draw fake rounded border

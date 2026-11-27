@@ -58,6 +58,10 @@ def only_onroad(started: bool, params: Params, CP: car.CarParams) -> bool:
 def navigation(started: bool, params: Params, CP: car.CarParams) -> bool:
   return started and params.get_bool("NavigationEnabled")
 
+def speed_limit_sign(started: bool, params: Params, CP: car.CarParams) -> bool:
+  # offroad too, so map downloads (ssh: ./mapd i) work while parked
+  return params.get_bool("NAPSpeedLimitSign")
+
 def only_offroad(started: bool, params: Params, CP: car.CarParams) -> bool:
   return not started
 
@@ -88,6 +92,7 @@ procs = [
   PythonProcess("modeld", "openpilot.selfdrive.modeld.modeld", only_onroad),
   PythonProcess("navd", "openpilot.selfdrive.navigation.navd", navigation),
   PythonProcess("mapsd", "openpilot.selfdrive.navigation.mapsd", navigation),
+  NativeProcess("mapd", "openpilot/third_party/mapd", ["./mapd"], speed_limit_sign, enabled=COMMA_HARDWARE),
   PythonProcess("dmonitoringmodeld", "openpilot.selfdrive.modeld.dmonitoringmodeld", driverview, enabled=(WEBCAM or not PC)),
 
   PythonProcess("sensord", "openpilot.system.sensord.sensord", only_onroad, enabled=not PC),

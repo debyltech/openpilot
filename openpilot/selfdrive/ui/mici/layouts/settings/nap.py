@@ -267,6 +267,12 @@ class NAPLayoutMici(NavScroller):
     always_show_max_speed = BigParamControl("always show max speed",
                                             "NAPAlwaysShowMaxSpeed")
 
+    # Road speed limit from offline OSM maps (mapd), top-right of the onroad view, engaged or not.
+    # Turning the sign off also stops mapd. Overspeed turns the sign red above the limit plus
+    # max(10 %, 5 mph / 8 km/h). Both re-read every 5 s, no reboot.
+    speed_limit_sign = BigParamControl("speed limit sign", "NAPSpeedLimitSign")
+    speed_limit_overspeed = BigParamControl("overspeed warning", "NAPSpeedLimitOverspeed")
+
     # ── Advanced (locked on) ─────────────────────────
     force_pre_ap = BigParamControl("force pre-ap mode", NAPParamKeys.FORCE_PRE_AP)
     force_pre_ap.set_enabled(False)
@@ -307,6 +313,8 @@ class NAPLayoutMici(NavScroller):
       radar_settings_btn,
       ibooster_enabled,
       always_show_max_speed,
+      speed_limit_sign,
+      speed_limit_overspeed,
       force_pre_ap,
       backup_epas_btn,
       flash_epas_btn,

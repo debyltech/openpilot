@@ -174,6 +174,10 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"NAPRadarUpsideDown", {PERSISTENT, BOOL}},
     {"NAPRadarVinReadStatus", {CLEAR_ON_MANAGER_START, STRING}},
     {"NAPScriptRunning", {CLEAR_ON_MANAGER_START, BOOL}},
+    {"NAPSpeedLimitOverspeed", {PERSISTENT, BOOL, "1"}},
+    {"NAPSpeedLimitSign", {PERSISTENT, BOOL, "1"}},
+    // mapd's own settings (github.com/pfeiferj/openpilot-mapd); mapd reads and writes it
+    {"MapdSettings", {PERSISTENT, JSON}},
     {"TermsVersion", {PERSISTENT, STRING}},
     {"TrainingVersion", {PERSISTENT, STRING}},
 };
