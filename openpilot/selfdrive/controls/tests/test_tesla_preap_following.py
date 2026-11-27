@@ -25,8 +25,8 @@ from openpilot.selfdrive.modeld.constants import ModelConstants
 from openpilot.selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
 
 
-NAP_FOLLOW_SETTINGS = range(1, 8)
-NAP_FOLLOW_TIMES_S = (0.85, 1.05, 1.25, 1.45, 1.65, 1.85, 2.05)
+NAP_FOLLOW_SETTINGS = (2, 3, 4)
+NAP_FOLLOW_TIMES_S = (1.05, 1.25, 1.45)
 FOLLOW_TEST_SPEED_MPS = 25.0
 STOP_DISTANCE_M = 6.0
 FULL_LOOP_DT_S = 0.01
@@ -190,7 +190,7 @@ def _full_loop_pitch(elapsed_s):
 
 def _run_full_closed_loop_following(
     monkeypatch,
-    nap_follow_dist=7,
+    nap_follow_dist=4,
     plant_aligned_feedforward=False,
     grade_compensation_scale=1.0,
 ):
@@ -347,7 +347,7 @@ def test_planner_adaptive_cap_changes_the_delivered_acceleration_for_unequal_spe
   lead_speed_mps = 35.0
   obstacle_ratio = 1.35
   t_follow = NAP_FOLLOW_TIMES_S[-1]
-  params = _MutablePlannerParams(nap_follow_dist=7, adaptive_accel=True)
+  params = _MutablePlannerParams(nap_follow_dist=4, adaptive_accel=True)
   planner = LongitudinalPlanner(_make_preap_params(), init_v=speed_mps, params=params)
   planner.mpc = _ConstantAccelerationMpc(speed_mps, acceleration_mps2=1.5)
   inputs = _make_planner_inputs(speed_mps)
@@ -379,18 +379,18 @@ def test_planner_adaptive_cap_changes_the_delivered_acceleration_for_unequal_spe
 
 
 def test_planner_publishes_the_follow_policy_used_by_mpc():
-  params = _MutablePlannerParams(nap_follow_dist=1)
+  params = _MutablePlannerParams(nap_follow_dist=2)
   planner = LongitudinalPlanner(_make_preap_params(), init_v=FOLLOW_TEST_SPEED_MPS, params=params)
   inputs = _make_planner_inputs(FOLLOW_TEST_SPEED_MPS)
   publisher = _CapturingPubMaster()
 
-  params.nap_follow_dist = 7
+  params.nap_follow_dist = 4
   for _ in range(NAP_FOLLOW_SETTLE_FRAMES + 20):
     planner.update(inputs)
   planner.publish(inputs, publisher)
 
   plan = publisher.message.longitudinalPlan
-  assert plan.napFollowDistance == 7
+  assert plan.napFollowDistance == 4
   assert plan.tFollow == pytest.approx(NAP_FOLLOW_TIMES_S[-1])
   assert planner.t_follow == NAP_FOLLOW_TIMES_S[-1]
   assert np.all(planner.mpc.params[:, 4] == planner.t_follow)
@@ -398,28 +398,28 @@ def test_planner_publishes_the_follow_policy_used_by_mpc():
 
 
 def test_follow_distance_change_waits_for_the_selection_to_settle():
-  params = _MutablePlannerParams(nap_follow_dist=4)
+  params = _MutablePlannerParams(nap_follow_dist=2)
   planner = LongitudinalPlanner(_make_preap_params(), init_v=FOLLOW_TEST_SPEED_MPS, params=params)
   inputs = _make_planner_inputs(FOLLOW_TEST_SPEED_MPS)
 
-  # cycling 5, 6, 7 one tap a second keeps the old gap
-  for setting in (5, 6, 7):
+  # cycling 4, 3, 4 one tap a second keeps the old gap
+  for setting in (4, 3, 4):
     params.nap_follow_dist = setting
     for _ in range(20):
       planner.update(inputs)
-    assert planner.active_nap_follow_dist == 4
+    assert planner.active_nap_follow_dist == 2
 
-  # 7 lands 4-5 s after the last tap, not before
+  # 4 lands 4-5 s after the last tap, not before
   for _ in range(NAP_FOLLOW_SETTLE_FRAMES - 40):
     planner.update(inputs)
-  assert planner.active_nap_follow_dist == 4
+  assert planner.active_nap_follow_dist == 2
   for _ in range(40):
     planner.update(inputs)
-  assert planner.active_nap_follow_dist == 7
+  assert planner.active_nap_follow_dist == 4
   assert planner.t_follow == NAP_FOLLOW_TIMES_S[-1]
 
 
-@pytest.mark.parametrize("nap_follow_dist", [-1, 0, 8])
+@pytest.mark.parametrize("nap_follow_dist", [-1, 0, 1, 5, 7, 8])
 def test_invalid_nap_follow_setting_publishes_zero_and_uses_personality(nap_follow_dist):
   params = _MutablePlannerParams(nap_follow_dist)
   planner = LongitudinalPlanner(_make_preap_params(), init_v=FOLLOW_TEST_SPEED_MPS, params=params)
@@ -491,7 +491,7 @@ def test_max_follow_setting_recovers_from_a_close_lead_without_closing_first():
     speed_lead_values=[FOLLOW_TEST_SPEED_MPS],
     breakpoints=[0.0],
     e2e=False,
-    nap_follow_dist=7,
+    nap_follow_dist=4,
   )
 
   valid, output = maneuver.evaluate()
@@ -502,15 +502,15 @@ def test_max_follow_setting_recovers_from_a_close_lead_without_closing_first():
 
 
 def test_max_follow_full_closed_loop_recovers_gap_with_production_fallback(monkeypatch):
-  samples, pedal_samples = _run_full_closed_loop_following(monkeypatch, nap_follow_dist=7)
+  samples, pedal_samples = _run_full_closed_loop_following(monkeypatch, nap_follow_dist=4)
   disabled_grade_samples, _ = _run_full_closed_loop_following(
     monkeypatch,
-    nap_follow_dist=7,
+    nap_follow_dist=4,
     grade_compensation_scale=0.0,
   )
   elapsed_s, gaps_m, speeds_mps, accelerations_mps2, planner_targets_mps2, vdas_targets_mps2, _ = samples.T
   disabled_grade_speeds_mps = disabled_grade_samples[:, 2]
-  desired_gap_m = get_T_FOLLOW(nap_follow_dist=7) * FOLLOW_TEST_SPEED_MPS + STOP_DISTANCE_M
+  desired_gap_m = get_T_FOLLOW(nap_follow_dist=4) * FOLLOW_TEST_SPEED_MPS + STOP_DISTANCE_M
   recovery_window = (elapsed_s >= FULL_LOOP_RECOVERY_END_S - 5.0) & (elapsed_s < FULL_LOOP_RECOVERY_END_S)
   grade_window = elapsed_s >= FULL_LOOP_RECOVERY_END_S
   settled_rolling_window = elapsed_s >= FULL_LOOP_ROLLING_RAMP_END_S + FULL_LOOP_GRADE_SETTLING_S
@@ -547,11 +547,11 @@ def test_max_follow_full_closed_loop_recovers_gap_with_production_fallback(monke
 def test_plant_aligned_full_closed_loop_grade_compensation_holds_speed(monkeypatch):
   samples, _ = _run_full_closed_loop_following(
     monkeypatch,
-    nap_follow_dist=7,
+    nap_follow_dist=4,
     plant_aligned_feedforward=True,
   )
   elapsed_s, gaps_m, speeds_mps, accelerations_mps2, _, vdas_targets_mps2, pitches_rad = samples.T
-  desired_gap_m = get_T_FOLLOW(nap_follow_dist=7) * FOLLOW_TEST_SPEED_MPS + STOP_DISTANCE_M
+  desired_gap_m = get_T_FOLLOW(nap_follow_dist=4) * FOLLOW_TEST_SPEED_MPS + STOP_DISTANCE_M
   uphill_window = (
     (elapsed_s >= FULL_LOOP_UPHILL_RAMP_END_S + FULL_LOOP_GRADE_SETTLING_S)
     & (elapsed_s < FULL_LOOP_UPHILL_HOLD_END_S)

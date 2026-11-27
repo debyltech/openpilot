@@ -125,10 +125,10 @@ class NAPLayout(Widget):
     follow_dist = self._params.get(NAPParamKeys.FOLLOW_DISTANCE, return_default=True)
     self._follow_buttons = multiple_button_item(
       "Follow Distance",
-      "Follow distance (1=closest, 7=farthest). Overridden by cruise stalk if present.",
-      buttons=["1", "2", "3", "4", "5", "6", "7"],
+      "Follow distance: 2 = 1.05 s, 3 = 1.25 s, 4 = 1.45 s. A change applies 4 s after the last tap.",
+      buttons=["2", "3", "4"],
       button_width=80,
-      selected_index=max(0, min(6, follow_dist - 1)),
+      selected_index=max(0, min(2, follow_dist - 2)),
       callback=self._on_follow_distance,
     )
     self._main_items.append(self._follow_buttons)
@@ -393,7 +393,7 @@ class NAPLayout(Widget):
   # ── Multiple-button callbacks ──
 
   def _on_follow_distance(self, index: int):
-    self._params.put(NAPParamKeys.FOLLOW_DISTANCE, index + 1)
+    self._params.put(NAPParamKeys.FOLLOW_DISTANCE, index + 2)
 
   def _on_pedal_can_bus(self, index: int):
     self._params.put(NAPParamKeys.PEDAL_CAN_BUS, PEDAL_CAN_BUS_VALUES[index])
@@ -649,7 +649,7 @@ class NAPLayout(Widget):
     # Refresh multiple-button selections
     follow_dist = self._params.get(NAPParamKeys.FOLLOW_DISTANCE, return_default=True)
     self._follow_buttons.action_item.set_selected_button(
-      max(0, min(6, follow_dist - 1)))
+      max(0, min(2, follow_dist - 2)))
 
     pedal_bus = self._params.get(NAPParamKeys.PEDAL_CAN_BUS, return_default=True)
     self._pedal_bus_buttons.action_item.set_selected_button(

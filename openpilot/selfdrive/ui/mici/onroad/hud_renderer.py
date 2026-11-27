@@ -308,16 +308,16 @@ class HudRenderer(Widget):
       max_color,
     )
 
-    # NAP follow distance (1 close .. 7 far) under MAX; shown with the box, so "always show max speed" keeps it up
+    # NAP follow distance (settings 2..4) as 1-3 lit bars right of MAX, on its baseline, so it stays in the
+    # box clear of the wheel icon; shown with the box, so "always show max speed" keeps it up
     if self.follow_distance:
-      rl.draw_text_ex(
-        self._font_semi_bold,
-        f"GAP {self.follow_distance}",
-        rl.Vector2(x + 25, y + FONT_SIZES.set_speed - 7 + 4 + FONT_SIZES.max_speed + 2),
-        FONT_SIZES.max_speed,
-        0,
-        max_color,
-      )
+      bar_x = x + 25 + measure_text_cached(self._font_semi_bold, max_text, FONT_SIZES.max_speed).x + 10
+      baseline = y + FONT_SIZES.set_speed - 7 + 4 + FONT_SIZES.max_speed * 0.8
+      dim_color = rl.Color(255, 255, 255, int(255 * 0.3 * alpha))
+      for i in range(3):
+        h = 12 + 7 * i
+        rl.draw_rectangle_rounded(rl.Rectangle(bar_x + i * 11, baseline - h, 6, h), 0.5, 4,
+                                  max_color if i < self.follow_distance - 1 else dim_color)
 
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
     """Draw the current vehicle speed and unit."""

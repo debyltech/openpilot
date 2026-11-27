@@ -13,6 +13,7 @@ from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
 from openpilot.selfdrive.controls.lib.longitudinal_mpc_lib.long_mpc import (
   LongitudinalMpc,
   LongitudinalPlanSource,
+  NAP_T_FOLLOW,
   get_safe_obstacle_distance,
   get_stopped_equivalence_factor,
   get_T_FOLLOW,
@@ -30,7 +31,6 @@ A_CRUISE_MIN = -0.5
 CONTROL_N_T_IDX = ModelConstants.T_IDXS[:CONTROL_N]
 ALLOW_THROTTLE_THRESHOLD = 0.4
 MIN_ALLOW_THROTTLE_SPEED = 2.5
-NAP_FOLLOW_DISTANCE_RANGE = range(1, 8)
 # A new follow distance applies only once the menu selection has held this long, so cycling through
 # the settings while driving doesn't jerk the car between gaps. The param is read once a second,
 # so a change lands 4-5 s after the last tap.
@@ -167,7 +167,7 @@ class LongitudinalPlanner:
 
     self.mpc.set_weights(prev_accel_constraint, personality=sm['selfdriveState'].personality)
     self.mpc.set_cur_state(self.v_desired_filter.x, self.output_a_target)
-    self.active_nap_follow_dist = self.nap_follow_dist if self._is_preap and self.nap_follow_dist in NAP_FOLLOW_DISTANCE_RANGE else None
+    self.active_nap_follow_dist = self.nap_follow_dist if self._is_preap and self.nap_follow_dist in NAP_T_FOLLOW else None
     self.t_follow = get_T_FOLLOW(sm['selfdriveState'].personality, self.active_nap_follow_dist)
     self.mpc.update(sm['radarState'], personality=sm['selfdriveState'].personality, t_follow=self.t_follow)
 
