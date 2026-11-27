@@ -194,10 +194,54 @@ def get_RadarState_from_vision(lead_msg: capnp._DynamicStructReader, v_ego: floa
   }
 
 
+class VisionRangeRate:
+  """Closing speed for a vision-only lead from the distance trend, blended with the model's speed.
+
+  The model's lead speed lags real closing by 1.4-2.3 m/s while approaching (pre-AP drive 2026-11-26),
+  so the planner braked late. An alpha-beta filter on dRel gives the range rate; the model's vRel
+  pulls it back so distance noise can't run away. Short distance jumps are glitches; a lasting one re-anchors.
+  """
+  ALPHA = 0.1   # distance correction per 20 Hz update
+  BETA = 0.005  # range-rate correction from the distance residual
+  GAMMA = 0.03  # pull toward the model's vRel per update
+  JUMP_M = 8.0  # residual that means a glitch or a different car
+  JUMP_CONFIRM = 5  # updates (0.25 s) a jump must last to count as a new car (cut-in); shorter is a glitch
+  RESIDUAL_CLIP_M = 2.0  # one noisy distance reading can only nudge the rate
+
+  def __init__(self):
+    self.d: float | None = None
+    self.rate = 0.0
+    self.jumps = 0
+
+  def reset(self):
+    self.d = None
+    self.jumps = 0
+
+  def update(self, d_meas: float, v_rel_model: float, dt: float = DT_MDL) -> float:
+    if self.d is None:
+      self.d, self.rate = d_meas, v_rel_model
+      return self.rate
+    d_pred = self.d + self.rate * dt
+    residual = d_meas - d_pred
+    if abs(residual) > max(self.JUMP_M, 0.2 * d_meas):
+      self.jumps += 1
+      if self.jumps < self.JUMP_CONFIRM:
+        self.d = d_pred  # coast through the glitch; the model's own value passes through as before
+        return v_rel_model
+      # a new car: re-anchor the distance but keep the rate (the model spikes at the switch) and blend on
+      d_pred, residual = d_meas, 0.0
+    self.jumps = 0
+    self.d = d_pred + self.ALPHA * residual
+    self.rate += self.BETA / dt * max(-self.RESIDUAL_CLIP_M, min(residual, self.RESIDUAL_CLIP_M))
+    self.rate += self.GAMMA * (v_rel_model - self.rate)
+    return self.rate
+
+
 class LeadTrackAssociation:
-  def __init__(self, low_speed_override: bool):
+  def __init__(self, low_speed_override: bool, vision_range_rate: bool = False):
     self.low_speed_override = low_speed_override
     self.incumbent_track_id: int | None = None
+    self.vision_rate = VisionRangeRate() if vision_range_rate else None
 
   def update(self, v_ego: float, ready: bool, tracks: dict[int, Track], lead_msg: capnp._DynamicStructReader,
              model_v_ego: float) -> dict[str, Any]:
@@ -211,6 +255,11 @@ class LeadTrackAssociation:
       lead_dict = track.get_RadarState(lead_msg.prob)
     elif ready and lead_msg.prob > .5:
       lead_dict = get_RadarState_from_vision(lead_msg, v_ego, model_v_ego)
+      if self.vision_rate is not None:
+        v_rel = self.vision_rate.update(lead_dict['dRel'], lead_dict['vRel'])
+        lead_dict.update(vRel=v_rel, vLead=v_ego + v_rel, vLeadK=v_ego + v_rel)
+    if self.vision_rate is not None and not (lead_dict['present'] and not lead_dict.get('radar', False)):
+      self.vision_rate.reset()
 
     if self.low_speed_override:
       low_speed_tracks = [candidate for candidate in tracks.values() if candidate.potential_low_speed_lead(v_ego)]
@@ -224,7 +273,7 @@ class LeadTrackAssociation:
 
 
 class RadarD:
-  def __init__(self, delay: float = 0.0):
+  def __init__(self, delay: float = 0.0, vision_range_rate: bool = False):
     self.current_time = 0.0
 
     self.tracks: dict[int, Track] = {}
@@ -239,7 +288,7 @@ class RadarD:
     self.radar_state_valid = False
 
     self.ready = False
-    self.lead_one_association = LeadTrackAssociation(low_speed_override=True)
+    self.lead_one_association = LeadTrackAssociation(low_speed_override=True, vision_range_rate=vision_range_rate)
     self.lead_two_association = LeadTrackAssociation(low_speed_override=False)
 
   def update(self, sm: messaging.SubMaster, rr: car.RadarData):
@@ -321,7 +370,7 @@ def main() -> None:
   sm = messaging.SubMaster(['modelV2', 'carState', 'radarTracks'], poll='modelV2')
   pm = messaging.PubMaster(['radarState'])
 
-  RD = RadarD(CP.radarDelay)
+  RD = RadarD(CP.radarDelay, vision_range_rate=CP.carFingerprint == "TESLA_MODEL_S_PREAP")
 
   while 1:
     sm.update()

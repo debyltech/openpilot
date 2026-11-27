@@ -1,7 +1,7 @@
 import pytest
 
 from openpilot.cereal import messaging
-from openpilot.selfdrive.controls.radard import KalmanParams, RADAR_TO_CAMERA, RadarD, Track
+from openpilot.selfdrive.controls.radard import KalmanParams, RADAR_TO_CAMERA, RadarD, Track, VisionRangeRate
 
 
 MAX_RADAR_MEASUREMENT_AGE = 0.5
@@ -137,3 +137,39 @@ def test_kalman_uses_observed_radar_interval():
   scenario.step(1.08, vision_d_rel=30.0, radar_points=[(7, 30.0, 0.0, 0.0)])
 
   assert scenario.radar.tracks[7].K_A[0][1] == pytest.approx(0.08)
+
+
+def test_vision_range_rate_catches_closing_the_model_understates():
+  # Real closing 2 m/s; the model's vRel says 0.5 m/s, as on the 2026-11-26 pre-AP drive.
+  f = VisionRangeRate()
+  rate = 0.0
+  for i in range(40):  # 2 s at 20 Hz
+    rate = f.update(60.0 - 2.0 * i * 0.05, -0.5)
+  assert rate < -1.3  # steady blend is ~5/8 distance trend, 3/8 model
+
+
+def test_vision_range_rate_stays_calm_on_distance_noise():
+  import numpy as np
+  rng = np.random.default_rng(0)
+  f = VisionRangeRate()
+  rates = [f.update(35.0 + rng.normal(0, 3.0), 0.0) for _ in range(400)]
+  assert np.std(rates[40:]) < 0.6
+  assert abs(np.mean(rates[40:])) < 0.3
+
+
+def test_vision_range_rate_resets_on_a_new_car():
+  f = VisionRangeRate()
+  for _ in range(40):
+    f.update(50.0, 0.0)
+  for _ in range(VisionRangeRate.JUMP_CONFIRM - 1):
+    assert f.update(30.0, -1.0) == -1.0  # glitch so far: the model passes through
+  assert abs(f.update(30.0, -1.0)) < 0.1  # confirmed new car: re-anchored, no huge range rate
+  assert f.d == 30.0
+
+
+def test_vision_range_rate_ignores_a_one_frame_distance_glitch():
+  f = VisionRangeRate()
+  for _ in range(40):
+    f.update(35.0, 0.0)
+  f.update(25.0, -4.7)  # one bad frame, as seen at t=65 s on the 2026-11-26 drive
+  assert abs(f.update(35.0, 0.0)) < 0.3
