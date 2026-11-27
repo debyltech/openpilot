@@ -51,11 +51,12 @@ class TogglesLayoutMici(NavScroller):
       is_metric_toggle,
       ldw_toggle,
       always_on_dm_toggle,
-      green_light_toggle,
-      lead_depart_toggle,
       record_front,
       record_mic,
       enable_openpilot,
+      # stopped-car chimes last: pre-AP can't hold a stop yet (no iBooster)
+      green_light_toggle,
+      lead_depart_toggle,
     ])
 
     # Toggle lists
