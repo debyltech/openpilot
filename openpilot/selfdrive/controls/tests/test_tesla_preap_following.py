@@ -9,6 +9,7 @@ from opendbc.car.tesla.preap import virtual_das
 from opendbc.car.tesla.preap.constants import PEDAL_LONG_K_BP, PEDAL_LONG_KI_V
 from opendbc.car.tesla.preap.virtual_das import GRAVITY, VirtualDAS
 from opendbc.car.tesla.pedal.controller import PEDAL_RAMP_RATE_DOWN, PEDAL_RAMP_RATE_UP
+from openpilot.selfdrive.controls.controlsd import PREAP_GRADE_LOOKAHEAD_S
 from openpilot.selfdrive.controls.lib.longcontrol import LongCtrlState
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.controls.lib import longitudinal_planner
@@ -250,13 +251,15 @@ def _run_full_closed_loop_following(
   for step in range(round(FULL_LOOP_DURATION_S / FULL_LOOP_DT_S)):
     elapsed_s = step * FULL_LOOP_DT_S
     pitch_rad = _full_loop_pitch(elapsed_s)
+    # controlsd hands the car the model's pitch this far ahead
+    sensed_pitch_rad = _full_loop_pitch(elapsed_s + PREAP_GRADE_LOOKAHEAD_S)
     gap_m = lead_distance_m - ego_distance_m
 
     if step % planner_interval_steps == 0:
       inputs = _make_planner_inputs(float(speed_mps))
       inputs["carState"].aEgo = float(acceleration_mps2)
       inputs["carState"].vCruise = lead_speed_mps * 3.6
-      inputs["carControl"].orientationNED = [0.0, pitch_rad, 0.0]
+      inputs["carControl"].orientationNED = [0.0, sensed_pitch_rad, 0.0]
       lead = inputs["radarState"].leadOne
       lead.present = True
       lead.dRel = float(max(gap_m, 0.0))
@@ -289,7 +292,7 @@ def _run_full_closed_loop_following(
         prev_pedal_di=pedal_di,
         a_ego=acceleration_mps2,
         freeze_integrator=False,
-        orientation_ned=[0.0, pitch_rad, 0.0],
+        orientation_ned=[0.0, sensed_pitch_rad, 0.0],
       )
       pedal_samples.append(pedal_di)
 

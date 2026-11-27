@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import math
+import numpy as np
 from numbers import Number
 
 from openpilot.cereal import log
@@ -21,12 +22,25 @@ from openpilot.selfdrive.controls.lib.latcontrol_torque import LatControlTorque
 from openpilot.selfdrive.controls.lib.longcontrol import LongControl
 from openpilot.selfdrive.modeld.modeld import LAT_SMOOTH_SECONDS
 from openpilot.selfdrive.locationd.helpers import PoseCalibrator, Pose
+from openpilot.selfdrive.modeld.constants import ModelConstants
 
 State = log.SelfdriveState.OpenpilotState
 LaneChangeState = log.LaneChangeState
 LaneChangeDirection = log.LaneChangeDirection
 
 ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
+
+# Pre-AP grade compensation reaches the wheels through the pedal 0.4 s late, so it gets the pitch the model
+# predicts this far ahead (the model's pitch change 1 s out tracks the real one, r 0.9-0.96, slope ~1).
+PREAP_GRADE_LOOKAHEAD_S = 0.8
+PREAP_GRADE_LOOKAHEAD_MAX = 0.05  # rad (~3 deg): a bad model frame can't swing the grade term far
+
+
+def preap_lookahead_pitch(pitch: float, model_orientation_y) -> float:
+  if len(model_orientation_y) != ModelConstants.IDX_N:
+    return pitch
+  change = float(np.interp(PREAP_GRADE_LOOKAHEAD_S, ModelConstants.T_IDXS, model_orientation_y))
+  return pitch + float(np.clip(change, -PREAP_GRADE_LOOKAHEAD_MAX, PREAP_GRADE_LOOKAHEAD_MAX))
 
 
 class Controls:
@@ -37,6 +51,7 @@ class Controls:
     cloudlog.info("controlsd got CarParams")
 
     self.CI = interfaces[self.CP.carFingerprint](self.CP)
+    self.is_preap = self.CP.carFingerprint == "TESLA_MODEL_S_PREAP"
 
     self.sm = messaging.SubMaster(['lateralDelay', 'vehicleParameters', 'lateralTorqueParameters', 'modelV2', 'selfdriveState',
                                    'extrinsicsCalibration', 'deviceMotion', 'longitudinalPlan', 'lateralManeuverPlan', 'carState', 'carOutput',
@@ -156,6 +171,8 @@ class Controls:
     CC.currentCurvature = self.curvature
     if self.calibrated_pose is not None:
       CC.orientationNED = self.calibrated_pose.orientation.xyz.tolist()
+      if self.is_preap and self.sm.valid['modelV2']:
+        CC.orientationNED[1] = preap_lookahead_pitch(CC.orientationNED[1], self.sm['modelV2'].orientation.y)
       CC.angularVelocity = self.calibrated_pose.angular_velocity.xyz.tolist()
 
     CC.cruiseControl.override = CC.enabled and not CC.longActive and self.CP.openpilotLongitudinalControl
