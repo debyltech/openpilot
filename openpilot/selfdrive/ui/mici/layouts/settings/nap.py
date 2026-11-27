@@ -222,6 +222,8 @@ class NAPLayoutMici(NavScroller):
     pedal_enabled.set_enabled(ui_state.is_offroad)
 
     adaptive_accel = BigParamControl("adaptive accel limits", NAPParamKeys.ADAPTIVE_ACCEL)
+    # beta: a light push (1-2 Nm) on a near-still wheel above 15 mph moves openpilot with you; a hard push still disengages
+    coop_steering = BigParamControl("co-op steering (beta)", NAPParamKeys.COOP_STEERING)
 
     # ── Pedal hardware ───────────────────────────────
     # default_value=2 matches NAPPedalCanBus declared default in params_keys.h
@@ -298,6 +300,7 @@ class NAPLayoutMici(NavScroller):
       regen_profile,
       pedal_enabled,
       adaptive_accel,
+      coop_steering,
       pedal_can_bus,
       pedal_calib_status,
       calibrate_pedal_btn,
