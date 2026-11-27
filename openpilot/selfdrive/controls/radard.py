@@ -207,15 +207,30 @@ class VisionRangeRate:
   JUMP_M = 8.0  # residual that means a glitch or a different car
   JUMP_CONFIRM = 5  # updates (0.25 s) a jump must last to count as a new car (cut-in); shorter is a glitch
   RESIDUAL_CLIP_M = 2.0  # one noisy distance reading can only nudge the rate
+  # The model's own lead accel is ~0 even when the lead clearly speeds up or slows (2026-11-27 drive), so the
+  # planner only reacted once the gap had opened. Lead accel = 1 s smoothed slope of the filtered lead speed.
+  A_LEAD_TAU = 1.0
 
   def __init__(self):
     self.d: float | None = None
     self.rate = 0.0
     self.jumps = 0
+    self.a_lead = 0.0
+    self._v_lead: float | None = None
 
   def reset(self):
     self.d = None
     self.jumps = 0
+    self.a_lead = 0.0
+    self._v_lead = None
+
+  def lead_accel(self, v_ego: float, dt: float = DT_MDL) -> float:
+    # from the filter's own rate, not update()'s return, which passes the model's value through glitches
+    v_lead = v_ego + self.rate
+    if self._v_lead is not None:
+      self.a_lead += dt / (self.A_LEAD_TAU + dt) * ((v_lead - self._v_lead) / dt - self.a_lead)
+    self._v_lead = v_lead
+    return self.a_lead
 
   def update(self, d_meas: float, v_rel_model: float, dt: float = DT_MDL) -> float:
     if self.d is None:
@@ -257,7 +272,7 @@ class LeadTrackAssociation:
       lead_dict = get_RadarState_from_vision(lead_msg, v_ego, model_v_ego)
       if self.vision_rate is not None:
         v_rel = self.vision_rate.update(lead_dict['dRel'], lead_dict['vRel'])
-        lead_dict.update(vRel=v_rel, vLead=v_ego + v_rel, vLeadK=v_ego + v_rel)
+        lead_dict.update(vRel=v_rel, vLead=v_ego + v_rel, vLeadK=v_ego + v_rel, aLeadK=self.vision_rate.lead_accel(v_ego))
     if self.vision_rate is not None and not (lead_dict['present'] and not lead_dict.get('radar', False)):
       self.vision_rate.reset()
 

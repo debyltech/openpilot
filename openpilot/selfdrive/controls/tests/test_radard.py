@@ -173,3 +173,29 @@ def test_vision_range_rate_ignores_a_one_frame_distance_glitch():
     f.update(35.0, 0.0)
   f.update(25.0, -4.7)  # one bad frame, as seen at t=65 s on the 2026-11-26 drive
   assert abs(f.update(35.0, 0.0)) < 0.3
+
+
+def test_vision_lead_accel_follows_a_lead_speeding_up():
+  # Lead holds 20 m/s 35 m ahead, then speeds up at 1 m/s^2; the model reports its speed but a ~0 accel.
+  f = VisionRangeRate()
+  v_ego, d, v_lead = 20.0, 35.0, 20.0
+  for _ in range(40):
+    f.update(d, v_lead - v_ego)
+    assert abs(f.lead_accel(v_ego)) < 0.05
+  for _ in range(60):  # 3 s
+    v_lead += 1.0 * 0.05
+    d += (v_lead - v_ego) * 0.05
+    f.update(d, v_lead - v_ego)
+    a = f.lead_accel(v_ego)
+  assert 0.6 < a < 1.3
+
+
+def test_vision_lead_accel_ignores_a_one_frame_glitch_and_resets():
+  f = VisionRangeRate()
+  for _ in range(40):
+    f.update(35.0, 0.0)
+    f.lead_accel(20.0)
+  f.update(25.0, -4.7)  # one bad frame passes the model's value through, but must not kick the accel
+  assert abs(f.lead_accel(20.0)) < 0.1
+  f.reset()
+  assert f.a_lead == 0.0
