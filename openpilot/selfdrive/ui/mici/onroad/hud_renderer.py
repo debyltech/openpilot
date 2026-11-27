@@ -19,6 +19,8 @@ KM_TO_MILE = 0.621371
 CRUISE_DISABLED_CHAR = '–'
 
 SET_SPEED_PERSISTENCE = 2.5  # seconds
+# stock LongIndicator distance bars at 3/4 size, narrowest on top: (white w, h), (green w, h), y offset from MAX baseline
+FOLLOW_BARS = [((24, 5), (45, 26), -27), ((30, 7), (51, 28), -16), ((36, 8), (57, 29), -4)]
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,7 @@ class HudRenderer(Widget):
     self.is_cruise_available: bool = True
     self.set_speed: float = SET_SPEED_NA
     self.follow_distance: int = 0
+    self._follow_distance_changed_time: float = -SET_SPEED_PERSISTENCE
     self._set_speed_changed_time: float = 0
     self.speed: float = 0.0
     self.v_ego_cluster_seen: bool = False
@@ -128,6 +131,10 @@ class HudRenderer(Widget):
     self._txt_chestnut_green: rl.Texture = gui_app.texture('icons_mici/chestnut_green.png', 60, 44)
     self._txt_chestnut_orange: rl.Texture = gui_app.texture('icons_mici/chestnut_orange.png', 75, 44)
     self._chestnut_icon: rl.Texture | None = None
+    self._txt_follow_bars = [
+      (gui_app.texture(f'icons_mici/longitudinal/distance_{n}.png', *white, keep_aspect_ratio=False),
+       gui_app.texture(f'icons_mici/longitudinal/distance_{n}_green.png', *green, keep_aspect_ratio=False))
+      for n, (white, green, _) in enumerate(FOLLOW_BARS, start=1)]
     self._wheel_alpha_filter = FirstOrderFilter(0, 0.05, 1 / gui_app.target_fps)
     self._wheel_y_filter = FirstOrderFilter(0, 0.1, 1 / gui_app.target_fps)
 
@@ -170,7 +177,10 @@ class HudRenderer(Widget):
     self._engaged = engaged
     self.set_speed = set_speed
     self.is_cruise_set = 0 < self.set_speed < SET_SPEED_NA
-    self.follow_distance = sm['longitudinalPlan'].napFollowDistance  # 0 = not a NAP pedal car
+    follow_distance = sm['longitudinalPlan'].napFollowDistance  # 0 = not a NAP pedal car
+    if self.follow_distance and follow_distance != self.follow_distance:
+      self._follow_distance_changed_time = rl.get_time()
+    self.follow_distance = follow_distance
     self.is_cruise_available = self.set_speed != -1
 
     v_ego_cluster = car_state.vEgoCluster
@@ -308,16 +318,20 @@ class HudRenderer(Widget):
       max_color,
     )
 
-    # NAP follow distance (settings 2..4) as 1-3 lit bars right of MAX, on its baseline, so it stays in the
-    # box clear of the wheel icon; shown with the box, so "always show max speed" keeps it up
+    # NAP follow distance (settings 2..4) as the stock distance bars, 1-3 lit, right of MAX on its baseline, so it
+    # stays in the box clear of the wheel icon; shown with the box, so "always show max speed" keeps it up. Like
+    # the stock indicator, the last lit bar goes green for a moment once a change takes effect (after the 4 s settle).
     if self.follow_distance:
-      bar_x = x + 25 + measure_text_cached(self._font_semi_bold, max_text, FONT_SIZES.max_speed).x + 10
+      center_x = x + 25 + measure_text_cached(self._font_semi_bold, max_text, FONT_SIZES.max_speed).x + 10 + FOLLOW_BARS[-1][0][0] / 2
       baseline = y + FONT_SIZES.set_speed - 7 + 4 + FONT_SIZES.max_speed * 0.8
-      dim_color = rl.Color(255, 255, 255, int(255 * 0.3 * alpha))
-      for i in range(3):
-        h = 12 + 7 * i
-        rl.draw_rectangle_rounded(rl.Rectangle(bar_x + i * 11, baseline - h, 6, h), 0.5, 4,
-                                  max_color if i < self.follow_distance - 1 else dim_color)
+      lit = self.follow_distance - 1
+      highlight = rl.get_time() - self._follow_distance_changed_time < SET_SPEED_PERSISTENCE
+      for i, ((white, green), (_, _, dy)) in enumerate(zip(self._txt_follow_bars, FOLLOW_BARS, strict=True)):
+        green_bar = highlight and i == lit - 1
+        texture = green if green_bar else white
+        bar_alpha = 1.0 if green_bar else 0.9 if i < lit else 0.35
+        rl.draw_texture_ex(texture, rl.Vector2(center_x - texture.width / 2, baseline + dy - texture.height / 2), 0.0, 1.0,
+                           rl.Color(255, 255, 255, int(255 * bar_alpha * alpha)))
 
   def _draw_current_speed(self, rect: rl.Rectangle) -> None:
     """Draw the current vehicle speed and unit."""
