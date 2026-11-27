@@ -26,7 +26,7 @@ from openpilot.selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
 
 
 NAP_FOLLOW_SETTINGS = range(1, 8)
-NAP_FOLLOW_TIMES_S = (0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9)
+NAP_FOLLOW_TIMES_S = (0.85, 1.05, 1.25, 1.45, 1.65, 1.85, 2.05)
 FOLLOW_TEST_SPEED_MPS = 25.0
 STOP_DISTANCE_M = 6.0
 FULL_LOOP_DT_S = 0.01
@@ -329,7 +329,7 @@ def _run_full_closed_loop_following(
 ])
 def test_preap_follow_cap_uses_obstacle_equivalent_distance(lead_speed, obstacle_ratio, expected_strength):
   speed_mps = 30.0
-  t_follow = 1.9
+  t_follow = NAP_FOLLOW_TIMES_S[-1]
   lead_distance = _physical_lead_distance(speed_mps, lead_speed, t_follow, obstacle_ratio)
 
   cap_strength = longitudinal_planner.get_preap_follow_cap_strength(
@@ -346,7 +346,7 @@ def test_planner_adaptive_cap_changes_the_delivered_acceleration_for_unequal_spe
   speed_mps = 30.0
   lead_speed_mps = 35.0
   obstacle_ratio = 1.35
-  t_follow = 1.9
+  t_follow = NAP_FOLLOW_TIMES_S[-1]
   params = _MutablePlannerParams(nap_follow_dist=7, adaptive_accel=True)
   planner = LongitudinalPlanner(_make_preap_params(), init_v=speed_mps, params=params)
   planner.mpc = _ConstantAccelerationMpc(speed_mps, acceleration_mps2=1.5)
@@ -391,8 +391,8 @@ def test_planner_publishes_the_follow_policy_used_by_mpc():
 
   plan = publisher.message.longitudinalPlan
   assert plan.napFollowDistance == 7
-  assert plan.tFollow == pytest.approx(1.9)
-  assert planner.t_follow == 1.9
+  assert plan.tFollow == pytest.approx(NAP_FOLLOW_TIMES_S[-1])
+  assert planner.t_follow == NAP_FOLLOW_TIMES_S[-1]
   assert np.all(planner.mpc.params[:, 4] == planner.t_follow)
   assert plan.tFollow == pytest.approx(planner.t_follow, abs=1e-6)
 
@@ -475,7 +475,7 @@ def test_max_follow_setting_recovers_from_a_close_lead_without_closing_first():
   valid, output = maneuver.evaluate()
   assert valid
   assert np.min(output[:, 6]) >= 19.5
-  assert output[-1, 6] == pytest.approx(53.5, abs=0.5)
+  assert output[-1, 6] == pytest.approx(NAP_FOLLOW_TIMES_S[-1] * FOLLOW_TEST_SPEED_MPS + STOP_DISTANCE_M, abs=0.5)
   assert output[-1, 3] == pytest.approx(FOLLOW_TEST_SPEED_MPS, abs=0.1)
 
 

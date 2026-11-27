@@ -68,7 +68,7 @@ def get_jerk_factor(personality=log.LongitudinalPersonality.standard):
     raise NotImplementedError("Longitudinal personality not supported")
 
 
-NAP_T_FOLLOW = (0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9)  # NAPFollowDistance 1..7, seconds
+NAP_T_FOLLOW = (0.85, 1.05, 1.25, 1.45, 1.65, 1.85, 2.05)  # NAPFollowDistance 1..7, seconds; 4 = stock standard
 
 
 def get_T_FOLLOW(personality=log.LongitudinalPersonality.standard, nap_follow_dist=None):

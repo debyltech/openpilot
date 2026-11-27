@@ -202,7 +202,7 @@ class NAPLayoutMici(NavScroller):
       "follow distance",
       NAPParamKeys.FOLLOW_DISTANCE,
       values=list(range(1, 8)),
-      labels=[f"{n} - {0.7 + 0.2 * (n - 1):.1f} s" for n in range(1, 8)],  # the mici font has no middle dot
+      labels=[f"{n} - {0.85 + 0.2 * (n - 1):.2f} s" for n in range(1, 8)],  # the mici font has no middle dot
       default_value=4,
     )
 
