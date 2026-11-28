@@ -6,7 +6,7 @@
 
 Used display-only: `mapdOut.speedLimit` drives the comma 4 speed-limit sign. All of mapd's speed-control
 features are off by default (its `settings/defaults.json`), and nothing in the planner reads `mapdOut`.
-Runs while `NAPSpeedLimitSign` is on (default), offroad too.
+Runs while `NAPSpeedLimitSign` is on (default off: OSM limits are often wrong on rural roads), offroad too.
 
 Maps are downloaded once per region over Wi-Fi, into `/data/media/0/osm`. Over SSH, with mapd running:
 
