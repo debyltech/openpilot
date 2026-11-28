@@ -224,6 +224,8 @@ class NAPLayoutMici(NavScroller):
     adaptive_accel = BigParamControl("adaptive accel limits", NAPParamKeys.ADAPTIVE_ACCEL)
     # beta: a light push (1-2 Nm) on a near-still wheel above 15 mph moves openpilot with you; a hard push still disengages
     coop_steering = BigParamControl("co-op steering (beta)", NAPParamKeys.COOP_STEERING)
+    # on: openpilot keeps the turn signal on through an armed lane change; off: the stalk alone drives it (next drive)
+    lane_change_blinker = BigParamControl("hold turn signal for lane change", NAPParamKeys.LANE_CHANGE_BLINKER)
 
     # ── Pedal hardware ───────────────────────────────
     # default_value=2 matches NAPPedalCanBus declared default in params_keys.h
@@ -307,6 +309,7 @@ class NAPLayoutMici(NavScroller):
       pedal_enabled,
       adaptive_accel,
       coop_steering,
+      lane_change_blinker,
       pedal_can_bus,
       pedal_calib_status,
       calibrate_pedal_btn,

@@ -52,6 +52,7 @@ class Controls:
 
     self.CI = interfaces[self.CP.carFingerprint](self.CP)
     self.is_preap = self.CP.carFingerprint == "TESLA_MODEL_S_PREAP"
+    self.hold_blinker = self.params.get_bool("NAPLaneChangeBlinker")
 
     self.sm = messaging.SubMaster(['lateralDelay', 'vehicleParameters', 'lateralTorqueParameters', 'modelV2', 'selfdriveState',
                                    'extrinsicsCalibration', 'deviceMotion', 'longitudinalPlan', 'lateralManeuverPlan', 'carState', 'carOutput',
@@ -119,8 +120,8 @@ class Controls:
     actuators = CC.actuators
     actuators.longControlState = self.LoC.long_control_state
 
-    # Enable blinkers while lane changing
-    if model_v2.meta.laneChangeState != LaneChangeState.off:
+    # Enable blinkers while lane changing (NAPLaneChangeBlinker; off, the stalk alone drives the lamp)
+    if self.hold_blinker and model_v2.meta.laneChangeState != LaneChangeState.off:
       CC.leftBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.left
       CC.rightBlinker = model_v2.meta.laneChangeDirection == LaneChangeDirection.right
 

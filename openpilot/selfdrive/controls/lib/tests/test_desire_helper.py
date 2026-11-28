@@ -218,3 +218,18 @@ def test_queued_change_timeout_resets_everything():
   assert dh.lane_change_state == LaneChangeState.off
   assert dh.lane_change_direction == LaneChangeDirection.none
   assert dh.queued_changes == 0
+
+
+def test_stalk_back_to_center_cancels_when_openpilot_does_not_hold_the_blinker():
+  dh = DesireHelper(hold_blinker=False)
+  _arm_left(dh)
+  assert dh.lane_change_state == LaneChangeState.preLaneChange
+  dh.update(FakeCarState(left=False), True, 0.0)  # lamp off: the stalk went back to center
+  assert dh.lane_change_state == LaneChangeState.off
+
+
+def test_held_stalk_still_changes_lanes_without_the_blinker_hold():
+  dh = DesireHelper(hold_blinker=False)
+  _arm_left(dh)
+  _tick(dh, _nudge_left(), n=3)
+  assert dh.lane_change_state == LaneChangeState.laneChangeStarting

@@ -39,7 +39,10 @@ DESIRES = {
 
 
 class DesireHelper:
-  def __init__(self):
+  def __init__(self, hold_blinker: bool = True):
+    # hold_blinker: openpilot drives the indicator (NAPLaneChangeBlinker). Off, the lamp follows the stalk, so
+    # returning the stalk to center cancels an armed change like stock openpilot.
+    self.hold_blinker = hold_blinker
     self.lane_change_state = LaneChangeState.off
     self.lane_change_direction = LaneChangeDirection.none
     self.lane_change_timer = 0.0
@@ -122,7 +125,7 @@ class DesireHelper:
 
         self.arm_timer += DT_MDL
 
-        if below_lane_change_speed:
+        if below_lane_change_speed or (not self.hold_blinker and not one_blinker):
           self._reset()
         elif torque_applied and not blindspot_detected:
           self.lane_change_state = LaneChangeState.laneChangeStarting
