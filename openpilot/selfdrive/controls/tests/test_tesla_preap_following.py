@@ -80,8 +80,8 @@ class _MutablePlannerParams:
     return self.nap_follow_dist
 
   def get_bool(self, key):
-    assert key == "NAPAdaptiveAccel"
-    return self.adaptive_accel
+    assert key in ("NAPAdaptiveAccel", "NAPExpHoldSetSpeed")
+    return self.adaptive_accel if key == "NAPAdaptiveAccel" else False
 
 
 class _ConstantAccelerationMpc:

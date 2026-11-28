@@ -227,6 +227,15 @@ class NAPLayoutMici(NavScroller):
     # on: openpilot keeps the turn signal on through an armed lane change; off: the stalk alone drives it (next drive)
     lane_change_blinker = BigParamControl("hold turn signal for lane change", NAPParamKeys.LANE_CHANGE_BLINKER)
 
+    # Experimental only: braking while openpilot is already slowing pauses pedal long and keeps the
+    # set speed; lifting off resumes, at a stop too. A hard (-4.5 m/s²) or 20 s press drops it as today.
+    coop_braking = BigParamControl("co-op braking (beta)", NAPParamKeys.COOP_BRAKING)
+    # Experimental: with nothing ahead and the model's plan not slowing, cruise to the set speed
+    # instead of the model's own (often slower) pace. Read every second, no reboot.
+    exp_hold_set_speed = BigParamControl("experimental: hold set speed", "NAPExpHoldSetSpeed")
+    exp_hold_set_speed.set_enabled(lambda: ui_state.experimental_mode)
+    coop_braking.set_enabled(lambda: ui_state.experimental_mode)
+
     # ── Pedal hardware ───────────────────────────────
     # default_value=2 matches NAPPedalCanBus declared default in params_keys.h
     # and the runtime fallback ("any nonzero is bus 2"). If the param is set
@@ -308,6 +317,8 @@ class NAPLayoutMici(NavScroller):
       regen_profile,
       pedal_enabled,
       adaptive_accel,
+      coop_braking,
+      exp_hold_set_speed,
       coop_steering,
       lane_change_blinker,
       pedal_can_bus,

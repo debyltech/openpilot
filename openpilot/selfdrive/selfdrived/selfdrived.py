@@ -135,6 +135,7 @@ class SelfdriveD:
     self.state_machine = StateMachine()
     self.rk = Ratekeeper(100, print_delay_threshold=None)
     self.prev_preap_chimes = PreAPChimeState()
+    self.prev_coop_brake_paused = False
     self.preap_regen_demand = RegenDemandCheck()
     self.green_light_helper = GreenLightHelper()
 
@@ -261,10 +262,15 @@ class SelfdriveD:
           long_engaged=bool(getattr(CS, 'enableLongControl', False)),
           prev=self.prev_preap_chimes,
         )
+        coop_brake_paused = bool(getattr(CS, 'coopBrakePaused', False))
         if chimes.long_engage:
           self.events.add(EventName.pedalCruiseEnabled)
         elif chimes.long_disengage:
-          self.events.add(EventName.pedalCruiseDisabled)
+          self.events.add(EventName.coopBrakePaused if coop_brake_paused else EventName.pedalCruiseDisabled)
+        elif self.prev_coop_brake_paused and not coop_brake_paused and CS.cruiseState.enabled \
+             and not getattr(CS, 'enableLongControl', False):
+          self.events.add(EventName.pedalCruiseDisabled)  # a hard or long press ended the pause
+        self.prev_coop_brake_paused = coop_brake_paused
 
         # Two shapes of "regen is not enough, add friction brake": the carstate
         # flag covers weak regen under-delivering an in-envelope request; the

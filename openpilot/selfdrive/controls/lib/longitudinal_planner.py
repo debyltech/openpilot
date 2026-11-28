@@ -35,6 +35,13 @@ MIN_ALLOW_THROTTLE_SPEED = 2.5
 # the settings while driving doesn't jerk the car between gaps. The param is read once a second,
 # so a change lands 4-5 s after the last tap.
 NAP_FOLLOW_SETTLE_FRAMES = int(4.0 / DT_MDL)
+# Pre-AP Experimental: on open road the model often holds ~8 mph under the set speed with a flat
+# plan (85% of the slow time on 2026-11-28). When nothing is ahead and the model's 10 s plan doesn't
+# slow, cruise to the set speed; the model takes over again the moment its plan dips.
+EXP_HOLD_PLAN_DROP = 1.0  # m/s the model's plan may fall below v_ego and still count as not slowing
+EXP_HOLD_MODEL_ACCEL = -0.5  # m/s^2; the model braking now always keeps it in charge
+EXP_HOLD_MIN_SPEED = 9.0  # m/s (20 mph)
+EXP_HOLD_FRAMES = int(1.0 / DT_MDL)  # open road must hold this long before cruise takes over
 
 
 # Pre-AP follow-mode accel cap: imported lazily to avoid circular deps
@@ -103,6 +110,8 @@ class LongitudinalPlanner:
     self._params = Params() if params is None else params
     self.nap_follow_dist = self._params.get("NAPFollowDistance", return_default=True) if self._is_preap else None
     self.nap_adaptive_accel = self._params.get_bool("NAPAdaptiveAccel") if self._is_preap else False
+    self.nap_exp_hold_speed = self._params.get_bool("NAPExpHoldSetSpeed") if self._is_preap else False
+    self.exp_open_road_frames = 0
     self._nap_follow_setting, self._nap_follow_setting_frame = self.nap_follow_dist, 0
     self.active_nap_follow_dist = None
     self.t_follow = get_T_FOLLOW()
@@ -126,6 +135,7 @@ class LongitudinalPlanner:
       if self._frame - self._nap_follow_setting_frame >= NAP_FOLLOW_SETTLE_FRAMES:
         self.nap_follow_dist = setting
       self.nap_adaptive_accel = self._params.get_bool("NAPAdaptiveAccel")
+      self.nap_exp_hold_speed = self._params.get_bool("NAPExpHoldSetSpeed")
 
     if len(sm['carControl'].orientationNED) == 3:
       accel_coast = get_coast_accel(sm['carControl'].orientationNED[1])
@@ -190,7 +200,16 @@ class LongitudinalPlanner:
     output_a_target_e2e = sm['modelV2'].action.desiredAcceleration
     output_should_stop_e2e = sm['modelV2'].action.shouldStop
 
-    self.a_cruise = get_cruise_accel(sm['selfdriveState'].experimentalMode, v_cruise, v_ego,
+    experimental = sm['selfdriveState'].experimentalMode
+    model_v = sm['modelV2'].velocity.x
+    open_road = (experimental and self.nap_exp_hold_speed and v_ego > EXP_HOLD_MIN_SPEED
+                 and not sm['radarState'].leadOne.present and not output_should_stop_e2e
+                 and output_a_target_e2e > EXP_HOLD_MODEL_ACCEL
+                 and len(model_v) > 0 and min(model_v) >= v_ego - EXP_HOLD_PLAN_DROP)
+    self.exp_open_road_frames = self.exp_open_road_frames + 1 if open_road else 0
+    use_e2e = experimental and self.exp_open_road_frames < EXP_HOLD_FRAMES
+
+    self.a_cruise = get_cruise_accel(use_e2e, v_cruise, v_ego,
                                      self.a_cruise, steer_angle_without_offset, self.CP, self.dt,
                                      accel_coast, self.allow_throttle)
     cruise_should_stop = should_stop(v_ego, self.a_cruise)
@@ -199,7 +218,7 @@ class LongitudinalPlanner:
 
     candidates = [(output_a_target_mpc, self.mpc.source, output_should_stop_mpc),
                   (self.a_cruise, LongitudinalPlanSource.cruise, cruise_should_stop)]
-    if sm['selfdriveState'].experimentalMode:
+    if use_e2e:
       candidates.append((output_a_target_e2e, LongitudinalPlanSource.e2e, output_should_stop_e2e))
 
     output_a_target, self.mpc.source, _ = min(candidates, key=lambda c: c[0])

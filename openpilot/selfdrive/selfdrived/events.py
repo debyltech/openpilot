@@ -1051,6 +1051,15 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
       Priority.HIGH, VisualAlert.none, AudibleAlert.disengage, 0.8),
   },
 
+  # Co-op braking: a brake press while openpilot was slowing pauses pedal long; lifting off resumes.
+  EventName.coopBrakePaused: {
+    ET.PERMANENT: Alert(
+      "Co-op Brake",
+      "lift off to resume",
+      AlertStatus.normal, AlertSize.mid,
+      Priority.HIGH, VisualAlert.none, AudibleAlert.prompt, 1.5),
+  },
+
   # Regen can't deliver a real braking need (closing on a lead too fast). One light pre-alert chime, not
   # the looping warningSoft that ramps to full volume: the car just coasts, the driver decides.
   EventName.pedalMaxRegen: {
